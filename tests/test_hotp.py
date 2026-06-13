@@ -7,6 +7,10 @@ from cryptography.fernet import Fernet
 from django.test import override_settings
 
 from django_mfa_toolkit.hotp import (
+    DEFAULT_HOTP_LOOK_AHEAD_MAX,
+    DEFAULT_HOTP_REPLAY_WINDOW_MAX,
+    DEFAULT_HOTP_RESYNC_SEARCH_WINDOW_MAX,
+    DEFAULT_HOTP_SECRET_LENGTH_MAX,
     HOTPConfigurationError,
     enroll_hotp,
     resync_hotp,
@@ -191,6 +195,18 @@ def test_enroll_hotp_validates_labels_and_counter():
             enroll_hotp(account_name="token@example.test", issuer_name="Toolkit", initial_counter=-1)
 
 
+def test_enroll_hotp_validates_secret_length():
+    with override_settings(**encryption_settings()):
+        with pytest.raises(HOTPConfigurationError):
+            enroll_hotp(account_name="token@example.test", issuer_name="Toolkit", secret_length=16)
+        with pytest.raises(HOTPConfigurationError):
+            enroll_hotp(
+                account_name="token@example.test",
+                issuer_name="Toolkit",
+                secret_length=DEFAULT_HOTP_SECRET_LENGTH_MAX + 1,
+            )
+
+
 def test_verify_hotp_validates_windows():
     with override_settings(**encryption_settings()):
         enrollment = enroll_hotp(account_name="token@example.test", issuer_name="Toolkit")
@@ -208,6 +224,26 @@ def test_verify_hotp_validates_windows():
                 submitted_code="000000",
                 server_counter=0,
                 replay_window=-1,
+            )
+
+
+def test_verify_hotp_validates_window_upper_bounds():
+    with override_settings(**encryption_settings()):
+        enrollment = enroll_hotp(account_name="token@example.test", issuer_name="Toolkit")
+
+        with pytest.raises(HOTPConfigurationError):
+            verify_hotp(
+                encrypted_secret=enrollment.persisted_secret,
+                submitted_code="000000",
+                server_counter=0,
+                look_ahead=DEFAULT_HOTP_LOOK_AHEAD_MAX + 1,
+            )
+        with pytest.raises(HOTPConfigurationError):
+            verify_hotp(
+                encrypted_secret=enrollment.persisted_secret,
+                submitted_code="000000",
+                server_counter=0,
+                replay_window=DEFAULT_HOTP_REPLAY_WINDOW_MAX + 1,
             )
 
 
@@ -367,6 +403,26 @@ def test_resync_hotp_requires_multiple_codes_and_valid_windows():
                 submitted_codes=["000000", "111111"],
                 server_counter=0,
                 replay_window=-1,
+            )
+
+
+def test_resync_hotp_validates_window_upper_bounds():
+    with override_settings(**encryption_settings()):
+        enrollment = enroll_hotp(account_name="token@example.test", issuer_name="Toolkit")
+
+        with pytest.raises(HOTPConfigurationError):
+            resync_hotp(
+                encrypted_secret=enrollment.persisted_secret,
+                submitted_codes=["000000", "111111"],
+                server_counter=0,
+                search_window=DEFAULT_HOTP_RESYNC_SEARCH_WINDOW_MAX + 1,
+            )
+        with pytest.raises(HOTPConfigurationError):
+            resync_hotp(
+                encrypted_secret=enrollment.persisted_secret,
+                submitted_codes=["000000", "111111"],
+                server_counter=0,
+                replay_window=DEFAULT_HOTP_REPLAY_WINDOW_MAX + 1,
             )
 
 

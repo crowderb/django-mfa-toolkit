@@ -92,6 +92,18 @@ def test_tampered_ciphertext_is_rejected():
             decrypt_secret_text(tampered)
 
 
+def test_malformed_ciphertext_charset_is_rejected():
+    with override_settings(**encryption_settings()):
+        with pytest.raises(SecretDecryptionError):
+            EncryptedSecret.parse("v1:test-key:not base64url!!")
+
+
+def test_decrypt_secret_text_rejects_non_ascii_ciphertext():
+    with override_settings(**encryption_settings()):
+        with pytest.raises(SecretDecryptionError):
+            decrypt_secret_text("v1:test-key:café")
+
+
 def test_key_ids_allow_decrypting_older_key_after_primary_rotates():
     old_key = Fernet.generate_key().decode("ascii")
     new_key = Fernet.generate_key().decode("ascii")

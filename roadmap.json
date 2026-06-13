@@ -26,6 +26,13 @@
       "description": "Local verification, control guidance, and agent-followable integration documentation.",
       "docs": [],
       "prerequisites": []
+    },
+    {
+      "id": "4",
+      "title": "Security Hardening",
+      "description": "Defense-in-depth hardening of MVP MFA primitives identified during security audit.",
+      "docs": [],
+      "prerequisites": []
     }
   ],
   "tasks": [
@@ -308,6 +315,74 @@
       "branch": "codex/mvp-integration-guide-security-invariants",
       "commit": "3396b36",
       "tests_added": 0
+    },
+    {
+      "id": "4.1",
+      "section": "4",
+      "title": "Bound caller-supplied TOTP/HOTP window and length parameters",
+      "description": "valid_window (TOTP), look_ahead/replay_window (HOTP verify), search_window/replay_window (HOTP resync), and secret_length currently only have lower-bound checks (or none). Each unbounded value drives a loop of pyotp HMAC computations per verification call, an algorithmic-complexity/DoS risk (CWE-770) if ever set very large via misconfiguration or an integrator threading request-derived input through.",
+      "type": "security",
+      "priority": "medium",
+      "effort": "small",
+      "status": "done",
+      "dependencies": [
+        "2.2",
+        "2.3",
+        "2.4"
+      ],
+      "steps": [
+        "Add DEFAULT_*_MAX_* constants for valid_window, look_ahead, replay_window, search_window, and secret_length (ceiling, not just floor), sized as ~10x the existing documented defaults.",
+        "Extend _validate_totp_parameters and _validate_hotp_parameters to accept and bound-check these values, raising TOTPConfigurationError/HOTPConfigurationError when out of range.",
+        "Add a focused test per bounded parameter asserting the *ConfigurationError is raised for an out-of-range value, mirroring test_verify_hotp_validates_windows and test_resync_hotp_requires_multiple_codes_and_valid_windows."
+      ],
+      "acceptance_criteria": [
+        "verify_totp, verify_hotp, resync_hotp, enroll_totp, and enroll_hotp reject out-of-range valid_window/look_ahead/replay_window/search_window/secret_length with a typed configuration error instead of performing unbounded iteration.",
+        "Existing documented defaults (valid_window=1, look_ahead=10, replay_window=10, search_window=100, secret_length=32) remain valid and unaffected.",
+        "New tests cover the rejection path for each bounded parameter."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-13",
+      "completed_at": "2026-06-13",
+      "completed_by": "sonnet-4-6:df5d0b34",
+      "completion_summary": "Added DEFAULT_*_MAX constants (~10x existing defaults) and upper-bound checks for valid_window (TOTP), look_ahead/replay_window (HOTP verify), search_window/replay_window (HOTP resync), and secret_length (TOTP/HOTP enroll), raising TOTPConfigurationError/HOTPConfigurationError when exceeded.",
+      "branch": "feature/mfa-bounds-and-ciphertext-validation",
+      "commit": "f6ba93b",
+      "tests_added": 5
+    },
+    {
+      "id": "4.2",
+      "section": "4",
+      "title": "Fail closed on malformed ciphertext in EncryptedSecret.parse",
+      "description": "EncryptedSecret.parse validates version, key_id, and that ciphertext is non-empty, but never validates ciphertext is valid base64url. decrypt_secret calls ciphertext.encode(\"ascii\") before Fernet decryption; non-ASCII ciphertext (corrupted/tampered persisted value) raises an unhandled UnicodeEncodeError instead of the library's SecretDecryptionError (CWE-755), which could surface as an unhandled 500 in a login/MFA flow instead of a clean rejection.",
+      "type": "security",
+      "priority": "medium",
+      "effort": "small",
+      "status": "done",
+      "dependencies": [
+        "2.1"
+      ],
+      "steps": [
+        "Add a ciphertext charset validation (base64url alphabet, e.g. ^[A-Za-z0-9_-]+=*$) to EncryptedSecret.parse, raising SecretDecryptionError for malformed ciphertext before any decode/decrypt is attempted.",
+        "Add a regression test asserting decrypt_secret_text(\"v1:test-key:<non-ascii>\") raises SecretDecryptionError, not UnicodeEncodeError."
+      ],
+      "acceptance_criteria": [
+        "Malformed/non-base64url ciphertext in a persisted_secret value raises SecretDecryptionError from EncryptedSecret.parse, never UnicodeEncodeError.",
+        "Existing round-trip and tampered-ciphertext tests (test_tampered_ciphertext_is_rejected, etc.) continue to pass unchanged."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-13",
+      "completed_at": "2026-06-13",
+      "completed_by": "sonnet-4-6:df5d0b34",
+      "completion_summary": "Added _CIPHERTEXT_RE base64url charset validation to EncryptedSecret.parse, raising SecretDecryptionError for malformed/non-ASCII ciphertext before any decode/decrypt is attempted (fixes unhandled UnicodeEncodeError).",
+      "branch": "feature/mfa-bounds-and-ciphertext-validation",
+      "commit": "32aeb87",
+      "tests_added": 2
     }
   ]
 }

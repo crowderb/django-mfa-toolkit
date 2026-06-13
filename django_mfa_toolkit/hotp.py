@@ -16,9 +16,13 @@ from django_mfa_toolkit.secret_storage import EncryptedSecret, decrypt_secret_te
 
 DEFAULT_HOTP_DIGITS = 6
 DEFAULT_HOTP_LOOK_AHEAD = 10
+DEFAULT_HOTP_LOOK_AHEAD_MAX = 100
 DEFAULT_HOTP_REPLAY_WINDOW = 10
+DEFAULT_HOTP_REPLAY_WINDOW_MAX = 100
 DEFAULT_HOTP_RESYNC_SEARCH_WINDOW = 100
+DEFAULT_HOTP_RESYNC_SEARCH_WINDOW_MAX = 1000
 DEFAULT_HOTP_SECRET_LENGTH = 32
+DEFAULT_HOTP_SECRET_LENGTH_MAX = 320
 
 HOTPResultClassification = Literal["success", "counter_window_match", "invalid", "replay"]
 HOTPResyncClassification = Literal[
@@ -112,8 +116,14 @@ def enroll_hotp(
     _validate_label("account_name", account_name)
     _validate_label("issuer_name", issuer_name)
     _validate_hotp_parameters(digits=digits, counter=initial_counter)
-    if secret_length < 32:
-        raise HOTPConfigurationError("HOTP secret length must be at least 32 base32 characters.")
+    if secret_length < DEFAULT_HOTP_SECRET_LENGTH:
+        raise HOTPConfigurationError(
+            f"HOTP secret length must be at least {DEFAULT_HOTP_SECRET_LENGTH} base32 characters."
+        )
+    if secret_length > DEFAULT_HOTP_SECRET_LENGTH_MAX:
+        raise HOTPConfigurationError(
+            f"HOTP secret length must not exceed {DEFAULT_HOTP_SECRET_LENGTH_MAX} base32 characters."
+        )
 
     secret = pyotp.random_base32(length=secret_length)
     hotp = pyotp.HOTP(
@@ -153,8 +163,16 @@ def resync_hotp(
     _validate_hotp_parameters(digits=digits, counter=server_counter)
     if search_window < 0:
         raise HOTPConfigurationError("HOTP resync search_window must not be negative.")
+    if search_window > DEFAULT_HOTP_RESYNC_SEARCH_WINDOW_MAX:
+        raise HOTPConfigurationError(
+            f"HOTP resync search_window must not exceed {DEFAULT_HOTP_RESYNC_SEARCH_WINDOW_MAX}."
+        )
     if replay_window < 0:
         raise HOTPConfigurationError("HOTP replay_window must not be negative.")
+    if replay_window > DEFAULT_HOTP_REPLAY_WINDOW_MAX:
+        raise HOTPConfigurationError(
+            f"HOTP replay_window must not exceed {DEFAULT_HOTP_REPLAY_WINDOW_MAX}."
+        )
     if isinstance(submitted_codes, (str, bytes)):
         raise HOTPConfigurationError("HOTP resynchronization requires a sequence of codes.")
     if len(submitted_codes) < 2:
@@ -260,8 +278,16 @@ def verify_hotp(
     _validate_hotp_parameters(digits=digits, counter=server_counter)
     if look_ahead < 0:
         raise HOTPConfigurationError("HOTP look_ahead must not be negative.")
+    if look_ahead > DEFAULT_HOTP_LOOK_AHEAD_MAX:
+        raise HOTPConfigurationError(
+            f"HOTP look_ahead must not exceed {DEFAULT_HOTP_LOOK_AHEAD_MAX}."
+        )
     if replay_window < 0:
         raise HOTPConfigurationError("HOTP replay_window must not be negative.")
+    if replay_window > DEFAULT_HOTP_REPLAY_WINDOW_MAX:
+        raise HOTPConfigurationError(
+            f"HOTP replay_window must not exceed {DEFAULT_HOTP_REPLAY_WINDOW_MAX}."
+        )
 
     timestamp = attempted_at or timezone.now()
     if not isinstance(submitted_code, str) or not submitted_code.strip():

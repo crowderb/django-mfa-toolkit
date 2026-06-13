@@ -8,6 +8,8 @@ from django.test import override_settings
 
 from django_mfa_toolkit.secret_storage import decrypt_secret_text
 from django_mfa_toolkit.totp import (
+    DEFAULT_TOTP_SECRET_LENGTH_MAX,
+    DEFAULT_TOTP_VALID_WINDOW_MAX,
     TOTPConfigurationError,
     enroll_totp,
     verify_totp,
@@ -149,6 +151,33 @@ def test_enroll_totp_validates_labels():
     with override_settings(**encryption_settings()):
         with pytest.raises(TOTPConfigurationError):
             enroll_totp(account_name="", issuer_name="Toolkit")
+
+
+def test_enroll_totp_validates_secret_length():
+    with override_settings(**encryption_settings()):
+        with pytest.raises(TOTPConfigurationError):
+            enroll_totp(account_name="agent@example.test", issuer_name="Toolkit", secret_length=16)
+        with pytest.raises(TOTPConfigurationError):
+            enroll_totp(
+                account_name="agent@example.test",
+                issuer_name="Toolkit",
+                secret_length=DEFAULT_TOTP_SECRET_LENGTH_MAX + 1,
+            )
+
+
+def test_verify_totp_validates_valid_window_upper_bound():
+    at_time = datetime(2026, 6, 13, 16, 0, tzinfo=timezone.utc)
+
+    with override_settings(**encryption_settings()):
+        enrollment = enroll_totp(account_name="agent@example.test", issuer_name="Toolkit")
+
+        with pytest.raises(TOTPConfigurationError):
+            verify_totp(
+                encrypted_secret=enrollment.persisted_secret,
+                submitted_code="000000",
+                at_time=at_time,
+                valid_window=DEFAULT_TOTP_VALID_WINDOW_MAX + 1,
+            )
 
 
 def test_verify_totp_uses_constant_time_pyotp_comparison(monkeypatch):
