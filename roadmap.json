@@ -324,7 +324,7 @@
       "type": "security",
       "priority": "medium",
       "effort": "small",
-      "status": "in_progress",
+      "status": "done",
       "dependencies": [
         "2.2",
         "2.3",
@@ -340,11 +340,17 @@
         "Existing documented defaults (valid_window=1, look_ahead=10, replay_window=10, search_window=100, secret_length=32) remain valid and unaffected.",
         "New tests cover the rejection path for each bounded parameter."
       ],
-      "assigned_agent": "sonnet-4-6:df5d0b34",
-      "assigned_at": "2026-06-13T17:34:21Z",
-      "lock_expires": "2026-06-13T19:34:21Z",
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-13"
+      "created_at": "2026-06-13",
+      "completed_at": "2026-06-13",
+      "completed_by": "sonnet-4-6:df5d0b34",
+      "completion_summary": "Added DEFAULT_*_MAX constants (~10x existing defaults) and upper-bound checks for valid_window (TOTP), look_ahead/replay_window (HOTP verify), search_window/replay_window (HOTP resync), and secret_length (TOTP/HOTP enroll), raising TOTPConfigurationError/HOTPConfigurationError when exceeded.",
+      "branch": "feature/mfa-bounds-and-ciphertext-validation",
+      "commit": "f6ba93b",
+      "tests_added": 5
     },
     {
       "id": "4.2",
@@ -354,7 +360,7 @@
       "type": "security",
       "priority": "medium",
       "effort": "small",
-      "status": "in_progress",
+      "status": "done",
       "dependencies": [
         "2.1"
       ],
@@ -366,11 +372,17 @@
         "Malformed/non-base64url ciphertext in a persisted_secret value raises SecretDecryptionError from EncryptedSecret.parse, never UnicodeEncodeError.",
         "Existing round-trip and tampered-ciphertext tests (test_tampered_ciphertext_is_rejected, etc.) continue to pass unchanged."
       ],
-      "assigned_agent": "sonnet-4-6:df5d0b34",
-      "assigned_at": "2026-06-13T17:34:21Z",
-      "lock_expires": "2026-06-13T19:34:21Z",
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-13"
+      "created_at": "2026-06-13",
+      "completed_at": "2026-06-13",
+      "completed_by": "sonnet-4-6:df5d0b34",
+      "completion_summary": "Added _CIPHERTEXT_RE base64url charset validation to EncryptedSecret.parse, raising SecretDecryptionError for malformed/non-ASCII ciphertext before any decode/decrypt is attempted (fixes unhandled UnicodeEncodeError).",
+      "branch": "feature/mfa-bounds-and-ciphertext-validation",
+      "commit": "32aeb87",
+      "tests_added": 2
     }
   ]
 }
