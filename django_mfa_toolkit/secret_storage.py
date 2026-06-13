@@ -12,6 +12,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 _SERIALIZED_VERSION = "v1"
 _KEY_ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
+_CIPHERTEXT_RE = re.compile(r"^[A-Za-z0-9_-]+=*$")
 
 
 class SecretStorageError(Exception):
@@ -49,6 +50,8 @@ class EncryptedSecret:
         _validate_key_id(key_id)
         if not ciphertext:
             raise SecretDecryptionError("Encrypted secret ciphertext is empty.")
+        if not _CIPHERTEXT_RE.fullmatch(ciphertext):
+            raise SecretDecryptionError("Encrypted secret ciphertext is not valid base64url.")
 
         return cls(version=version, key_id=key_id, ciphertext=ciphertext)
 
