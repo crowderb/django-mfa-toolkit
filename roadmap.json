@@ -58,8 +58,8 @@
       "completed_at": "2026-06-13",
       "completed_by": "codex:9f4c2a81",
       "completion_summary": "Added uv-managed package metadata, minimal Django app package, pytest-django settings, and smoke tests.",
-      "branch": "main",
-      "commit": "493b92a",
+      "branch": "codex/foundation-package-architecture",
+      "commit": "07ef5d8",
       "tests_added": 2
     },
     {
@@ -91,8 +91,8 @@
       "completed_at": "2026-06-13",
       "completed_by": "codex:9f4c2a81",
       "completion_summary": "Documented the MVP custom service API decision, dependency strategy, security invariants, and required security tests.",
-      "branch": "main",
-      "commit": "493b92a",
+      "branch": "codex/foundation-package-architecture",
+      "commit": "07ef5d8",
       "tests_added": 0
     },
     {
