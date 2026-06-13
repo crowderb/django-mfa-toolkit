@@ -1,0 +1,265 @@
+{
+  "$schema_version": "1.0",
+  "project": "django-mfa-toolkit",
+  "last_updated": "2026-06-13",
+  "priorities": "",
+  "notes": [],
+  "references": [],
+  "sections": [
+    {
+      "id": "1",
+      "title": "Foundation",
+      "description": "Packaging, architecture decisions, and test infrastructure for the MVP.",
+      "docs": [],
+      "prerequisites": []
+    },
+    {
+      "id": "2",
+      "title": "MVP MFA Primitives",
+      "description": "TOTP and HOTP services, persistence, and security invariants.",
+      "docs": [],
+      "prerequisites": []
+    },
+    {
+      "id": "3",
+      "title": "Agent-Focused Verification and Docs",
+      "description": "Local verification, control guidance, and agent-followable integration documentation.",
+      "docs": [],
+      "prerequisites": []
+    }
+  ],
+  "tasks": [
+    {
+      "id": "1.1",
+      "section": "1",
+      "title": "Establish package skeleton and test harness",
+      "description": "Create the initial Python/Django package structure and test baseline needed before implementing MFA primitives.",
+      "type": "infra",
+      "priority": "critical",
+      "effort": "small",
+      "status": "ready",
+      "dependencies": [],
+      "steps": [
+        "Create pyproject.toml with package metadata and development dependencies.",
+        "Create the django_mfa_toolkit package and tests directory.",
+        "Configure pytest and Django test settings for local package tests.",
+        "Add minimal import and smoke tests for the package."
+      ],
+      "acceptance_criteria": [
+        "The package can be installed or imported in editable development mode.",
+        "The test command runs successfully with at least one smoke test.",
+        "No MFA behavior is implemented before the package/test foundation exists."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-13"
+    },
+    {
+      "id": "1.2",
+      "section": "1",
+      "title": "Document MVP architecture and dependency strategy",
+      "description": "Make the initial secure-by-construction design decisions before implementing TOTP or HOTP behavior.",
+      "type": "security",
+      "priority": "critical",
+      "effort": "small",
+      "status": "ready",
+      "dependencies": [],
+      "steps": [
+        "Evaluate building on django-otp versus a custom device/service API for the TOTP and HOTP MVP.",
+        "Document the selected approach and rejected alternative in .docs/design/mvp-architecture.md.",
+        "Identify vetted libraries or Django primitives to use for OTP generation, constant-time comparison, randomness, encryption, and testing.",
+        "Document security invariants that implementation tasks must preserve."
+      ],
+      "acceptance_criteria": [
+        "The architecture note explicitly decides whether the MVP builds on django-otp or a custom API.",
+        "The note identifies cryptographic and protocol libraries instead of hand-rolled behavior.",
+        "The note lists required tests for replay prevention, constant-time comparison, secret storage, throttling or lockout integration, and HOTP resynchronization."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-13"
+    },
+    {
+      "id": "2.1",
+      "section": "2",
+      "title": "Implement encrypted MFA secret storage primitives",
+      "description": "Provide the storage boundary for MFA secrets before factor enrollment or verification is implemented.",
+      "type": "security",
+      "priority": "critical",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "1.1",
+        "1.2"
+      ],
+      "steps": [
+        "Define the model or storage abstraction for encrypted MFA secrets.",
+        "Integrate a vetted encryption mechanism compatible with Django settings and key management.",
+        "Add tests proving raw secrets are not persisted in plaintext.",
+        "Document local-development pseudo-secret examples without real credentials."
+      ],
+      "acceptance_criteria": [
+        "MFA secrets are encrypted at rest through a documented abstraction.",
+        "Tests fail if raw secret material is stored directly.",
+        "Examples use pseudo values only and do not introduce real secrets."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-13"
+    },
+    {
+      "id": "2.2",
+      "section": "2",
+      "title": "Implement TOTP enrollment and verification services",
+      "description": "Build standards-compliant OATH TOTP enrollment and verification service APIs for authenticator apps.",
+      "type": "feature",
+      "priority": "high",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "2.1"
+      ],
+      "steps": [
+        "Create TOTP enrollment service APIs that generate secure secrets and provisioning metadata.",
+        "Create TOTP verification service APIs using vetted OATH TOTP behavior.",
+        "Use constant-time comparison or vetted verification primitives for submitted codes.",
+        "Add focused tests for valid code acceptance, invalid code rejection, and allowed time-window behavior."
+      ],
+      "acceptance_criteria": [
+        "TOTP enrollment returns enough metadata for authenticator-app provisioning without exposing raw persisted secrets.",
+        "TOTP verification accepts valid codes and rejects invalid codes using standards-compliant behavior.",
+        "Tests cover time-window boundaries and constant-time or vetted comparison behavior."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-13"
+    },
+    {
+      "id": "2.3",
+      "section": "2",
+      "title": "Implement HOTP verification with audit logging",
+      "description": "Build standards-compliant OATH HOTP verification with counter advancement, replay prevention, and usage audit records.",
+      "type": "feature",
+      "priority": "critical",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "2.1"
+      ],
+      "steps": [
+        "Create HOTP enrollment service APIs for counter-based hardware token secrets.",
+        "Create HOTP verification service APIs with bounded look-ahead counter windows.",
+        "Record HOTP usage audit entries for successful verification, failed verification, replay attempts, and counter-window matches.",
+        "Add tests for counter advancement, replay rejection, failed-code audit records, and bounded-window behavior."
+      ],
+      "acceptance_criteria": [
+        "HOTP verification advances counters only on successful validation.",
+        "Previously accepted HOTP codes are rejected on replay.",
+        "Audit records capture submitted outcome, server counter, matched counter when applicable, and result classification."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-13"
+    },
+    {
+      "id": "2.4",
+      "section": "2",
+      "title": "Implement HOTP counter resynchronization flow",
+      "description": "Provide a safe HOTP resynchronization workflow for counter drift without weakening replay prevention.",
+      "type": "feature",
+      "priority": "high",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "2.3"
+      ],
+      "steps": [
+        "Design the resynchronization service API around multiple consecutive HOTP submissions.",
+        "Validate resync attempts with bounded search windows and replay protection.",
+        "Record audit entries for successful and failed resynchronization attempts.",
+        "Add tests for successful resync, failed resync, replay during resync, and excessive drift rejection."
+      ],
+      "acceptance_criteria": [
+        "A desynchronized HOTP device can be resynchronized through a documented safe flow.",
+        "Resynchronization does not accept replayed codes or unbounded counter jumps.",
+        "Audit records explain resync outcomes clearly enough for troubleshooting."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-13"
+    },
+    {
+      "id": "3.1",
+      "section": "3",
+      "title": "Add local security invariant checks for the MVP",
+      "description": "Create fixture-bound tests and checks that verify the MVP security controls without adding generalized scanner behavior.",
+      "type": "security",
+      "priority": "high",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "2.2",
+        "2.3",
+        "2.4"
+      ],
+      "steps": [
+        "Create local test fixtures for synthetic users and synthetic TOTP/HOTP devices.",
+        "Add replay, constant-time comparison, audit, and session-boundary tests where supported by the MVP surface.",
+        "Add a first control-dependency representation for required TOTP and HOTP safeguards.",
+        "Document that verification helpers are local, fixture-bound, and not targetable against arbitrary hosts."
+      ],
+      "acceptance_criteria": [
+        "Verification checks run only against local tests, fixtures, or direct service calls.",
+        "No helper accepts arbitrary target URLs, hosts, credentials, or payloads.",
+        "The MVP controls for replay prevention, audit logging, and comparison safety are represented in tests or checks."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-13"
+    },
+    {
+      "id": "3.2",
+      "section": "3",
+      "title": "Write agent-followable MVP integration guide",
+      "description": "Document the MVP as decision paths and exact integration checks that a developer or coding agent can follow.",
+      "type": "enhancement",
+      "priority": "medium",
+      "effort": "small",
+      "status": "backlog",
+      "dependencies": [
+        "2.2",
+        "2.4"
+      ],
+      "steps": [
+        "Create an MVP integration guide covering package installation, settings, enrollment, verification, and HOTP resync.",
+        "Include exact examples for expected service calls and test commands.",
+        "Document security assumptions, required controls, and compensating-control expectations.",
+        "Include a troubleshooting path for HOTP counter drift and audit-log interpretation."
+      ],
+      "acceptance_criteria": [
+        "The guide explains TOTP and HOTP setup through concrete decision paths.",
+        "The guide tells agents how to verify integration locally without scanner-like behavior.",
+        "The guide documents security assumptions and links them to tests or checks."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-13"
+    }
+  ]
+}
