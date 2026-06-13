@@ -244,7 +244,7 @@
       "type": "security",
       "priority": "high",
       "effort": "medium",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "2.2",
         "2.3",
@@ -265,7 +265,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-13"
+      "created_at": "2026-06-13",
+      "completed_at": "2026-06-13",
+      "completed_by": "codex:7b3e9d12",
+      "completion_summary": "Added local fixture-bound security invariant checks, synthetic MFA pytest fixtures, and a control-dependency representation for encrypted storage, constant-time comparison, replay prevention, HOTP audit behavior, and bounded HOTP resynchronization without targetable scanner inputs.",
+      "branch": null,
+      "commit": null,
+      "tests_added": 6
     },
     {
       "id": "3.2",
@@ -275,7 +281,7 @@
       "type": "enhancement",
       "priority": "medium",
       "effort": "small",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "2.2",
         "2.4"
@@ -295,7 +301,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-13"
+      "created_at": "2026-06-13",
+      "completed_at": "2026-06-13",
+      "completed_by": "codex:7b3e9d12",
+      "completion_summary": "Wrote an agent-followable MVP integration guide covering uv setup, Django secret-encryption settings, TOTP enrollment and verification, HOTP verification and resynchronization, troubleshooting, and the required local control boundaries.",
+      "branch": null,
+      "commit": null,
+      "tests_added": 0
     }
   ]
 }
