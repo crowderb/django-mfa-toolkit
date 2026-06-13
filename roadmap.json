@@ -127,8 +127,8 @@
       "completed_at": "2026-06-13",
       "completed_by": "codex:7b3e9d12",
       "completion_summary": "Added a Fernet-backed encrypted MFA secret storage boundary with Django settings-based key IDs, key rotation support, documentation, and tests proving persisted values do not contain plaintext secret material.",
-      "branch": null,
-      "commit": null,
+      "branch": "codex/mfa-secret-storage-totp",
+      "commit": "d821e11",
       "tests_added": 9
     },
     {
@@ -162,8 +162,8 @@
       "completed_at": "2026-06-13",
       "completed_by": "codex:7b3e9d12",
       "completion_summary": "Added pyotp-backed TOTP enrollment and verification services using encrypted secret persistence, provisioning metadata, constant-time comparison, allowed time-window checks, and replay-aware matched timecode handling.",
-      "branch": null,
-      "commit": null,
+      "branch": "codex/mfa-secret-storage-totp",
+      "commit": "d821e11",
       "tests_added": 8
     },
     {
