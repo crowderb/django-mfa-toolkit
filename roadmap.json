@@ -103,7 +103,7 @@
       "type": "security",
       "priority": "critical",
       "effort": "medium",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "1.1",
         "1.2"
@@ -123,7 +123,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-13"
+      "created_at": "2026-06-13",
+      "completed_at": "2026-06-13",
+      "completed_by": "codex:7b3e9d12",
+      "completion_summary": "Added a Fernet-backed encrypted MFA secret storage boundary with Django settings-based key IDs, key rotation support, documentation, and tests proving persisted values do not contain plaintext secret material.",
+      "branch": "codex/mfa-secret-storage-totp",
+      "commit": "d821e11",
+      "tests_added": 9
     },
     {
       "id": "2.2",
@@ -133,7 +139,7 @@
       "type": "feature",
       "priority": "high",
       "effort": "medium",
-      "status": "backlog",
+      "status": "done",
       "dependencies": [
         "2.1"
       ],
@@ -152,7 +158,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-13"
+      "created_at": "2026-06-13",
+      "completed_at": "2026-06-13",
+      "completed_by": "codex:7b3e9d12",
+      "completion_summary": "Added pyotp-backed TOTP enrollment and verification services using encrypted secret persistence, provisioning metadata, constant-time comparison, allowed time-window checks, and replay-aware matched timecode handling.",
+      "branch": "codex/mfa-secret-storage-totp",
+      "commit": "d821e11",
+      "tests_added": 8
     },
     {
       "id": "2.3",
@@ -162,7 +174,7 @@
       "type": "feature",
       "priority": "critical",
       "effort": "medium",
-      "status": "backlog",
+      "status": "ready",
       "dependencies": [
         "2.1"
       ],

@@ -18,7 +18,10 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Topic :: Security",
 ]
-dependencies = []
+dependencies = [
+    "cryptography>=49.0.0",
+    "pyotp>=2.9.0",
+]
 
 [dependency-groups]
 dev = [
