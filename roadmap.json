@@ -174,7 +174,7 @@
       "type": "feature",
       "priority": "critical",
       "effort": "medium",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "2.1"
       ],
@@ -193,7 +193,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-13"
+      "created_at": "2026-06-13",
+      "completed_at": "2026-06-13",
+      "completed_by": "codex:7b3e9d12",
+      "completion_summary": "Added pyotp-backed HOTP enrollment and verification services with encrypted secret persistence, bounded look-ahead, bounded replay classification, explicit counter advancement, and structured audit records for success, failed verification, replay, and counter-window matches.",
+      "branch": "codex/hotp-verification-resync",
+      "commit": "a490f74",
+      "tests_added": 10
     },
     {
       "id": "2.4",
@@ -203,7 +209,7 @@
       "type": "feature",
       "priority": "high",
       "effort": "medium",
-      "status": "backlog",
+      "status": "done",
       "dependencies": [
         "2.3"
       ],
@@ -222,7 +228,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-13"
+      "created_at": "2026-06-13",
+      "completed_at": "2026-06-13",
+      "completed_by": "codex:7b3e9d12",
+      "completion_summary": "Added HOTP counter resynchronization using multiple consecutive submissions, bounded forward search, bounded replay detection, explicit next-counter handling, and resynchronization audit records for success, invalid, replay, and excessive-drift outcomes.",
+      "branch": "codex/hotp-verification-resync",
+      "commit": "a490f74",
+      "tests_added": 6
     },
     {
       "id": "3.1",
@@ -232,7 +244,7 @@
       "type": "security",
       "priority": "high",
       "effort": "medium",
-      "status": "backlog",
+      "status": "ready",
       "dependencies": [
         "2.2",
         "2.3",
@@ -263,7 +275,7 @@
       "type": "enhancement",
       "priority": "medium",
       "effort": "small",
-      "status": "backlog",
+      "status": "ready",
       "dependencies": [
         "2.2",
         "2.4"
