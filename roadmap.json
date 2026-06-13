@@ -197,8 +197,8 @@
       "completed_at": "2026-06-13",
       "completed_by": "codex:7b3e9d12",
       "completion_summary": "Added pyotp-backed HOTP enrollment and verification services with encrypted secret persistence, bounded look-ahead, bounded replay classification, explicit counter advancement, and structured audit records for success, failed verification, replay, and counter-window matches.",
-      "branch": null,
-      "commit": null,
+      "branch": "codex/hotp-verification-resync",
+      "commit": "a490f74",
       "tests_added": 10
     },
     {
@@ -232,8 +232,8 @@
       "completed_at": "2026-06-13",
       "completed_by": "codex:7b3e9d12",
       "completion_summary": "Added HOTP counter resynchronization using multiple consecutive submissions, bounded forward search, bounded replay detection, explicit next-counter handling, and resynchronization audit records for success, invalid, replay, and excessive-drift outcomes.",
-      "branch": null,
-      "commit": null,
+      "branch": "codex/hotp-verification-resync",
+      "commit": "a490f74",
       "tests_added": 6
     },
     {
