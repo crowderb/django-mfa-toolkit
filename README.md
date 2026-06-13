@@ -73,3 +73,4 @@ No public API, package structure, compatibility promise, or release schedule exi
 The initial concept document lives in:
 
 - `.docs/django-mfa-toolkit-concept.md`
+- `.docs/design/mvp-integration-guide.md`
