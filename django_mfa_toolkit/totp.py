@@ -16,7 +16,9 @@ from django_mfa_toolkit.secret_storage import EncryptedSecret, decrypt_secret_te
 DEFAULT_TOTP_DIGITS = 6
 DEFAULT_TOTP_INTERVAL = 30
 DEFAULT_TOTP_VALID_WINDOW = 1
+DEFAULT_TOTP_VALID_WINDOW_MAX = 10
 DEFAULT_TOTP_SECRET_LENGTH = 32
+DEFAULT_TOTP_SECRET_LENGTH_MAX = 320
 
 TOTPFailureReason = Literal["invalid", "replay"]
 
@@ -65,8 +67,14 @@ def enroll_totp(
     _validate_label("account_name", account_name)
     _validate_label("issuer_name", issuer_name)
     _validate_totp_parameters(digits=digits, interval=interval)
-    if secret_length < 32:
-        raise TOTPConfigurationError("TOTP secret length must be at least 32 base32 characters.")
+    if secret_length < DEFAULT_TOTP_SECRET_LENGTH:
+        raise TOTPConfigurationError(
+            f"TOTP secret length must be at least {DEFAULT_TOTP_SECRET_LENGTH} base32 characters."
+        )
+    if secret_length > DEFAULT_TOTP_SECRET_LENGTH_MAX:
+        raise TOTPConfigurationError(
+            f"TOTP secret length must not exceed {DEFAULT_TOTP_SECRET_LENGTH_MAX} base32 characters."
+        )
 
     secret = pyotp.random_base32(length=secret_length)
     totp = pyotp.TOTP(secret, digits=digits, interval=interval, name=account_name, issuer=issuer_name)
@@ -96,6 +104,10 @@ def verify_totp(
     _validate_totp_parameters(digits=digits, interval=interval)
     if valid_window < 0:
         raise TOTPConfigurationError("TOTP valid_window must not be negative.")
+    if valid_window > DEFAULT_TOTP_VALID_WINDOW_MAX:
+        raise TOTPConfigurationError(
+            f"TOTP valid_window must not exceed {DEFAULT_TOTP_VALID_WINDOW_MAX}."
+        )
     if not isinstance(submitted_code, str) or not submitted_code.strip():
         return TOTPVerificationResult(accepted=False, failure_reason="invalid")
 
