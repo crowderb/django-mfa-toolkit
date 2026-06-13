@@ -37,7 +37,7 @@
       "type": "infra",
       "priority": "critical",
       "effort": "small",
-      "status": "ready",
+      "status": "done",
       "dependencies": [],
       "steps": [
         "Create pyproject.toml with package metadata and development dependencies.",
@@ -54,7 +54,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-13"
+      "created_at": "2026-06-13",
+      "completed_at": "2026-06-13",
+      "completed_by": "codex:9f4c2a81",
+      "completion_summary": "Added uv-managed package metadata, minimal Django app package, pytest-django settings, and smoke tests.",
+      "branch": "main",
+      "commit": "493b92a",
+      "tests_added": 2
     },
     {
       "id": "1.2",
@@ -64,7 +70,7 @@
       "type": "security",
       "priority": "critical",
       "effort": "small",
-      "status": "ready",
+      "status": "done",
       "dependencies": [],
       "steps": [
         "Evaluate building on django-otp versus a custom device/service API for the TOTP and HOTP MVP.",
@@ -81,7 +87,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-13"
+      "created_at": "2026-06-13",
+      "completed_at": "2026-06-13",
+      "completed_by": "codex:9f4c2a81",
+      "completion_summary": "Documented the MVP custom service API decision, dependency strategy, security invariants, and required security tests.",
+      "branch": "main",
+      "commit": "493b92a",
+      "tests_added": 0
     },
     {
       "id": "2.1",
@@ -91,7 +103,7 @@
       "type": "security",
       "priority": "critical",
       "effort": "medium",
-      "status": "backlog",
+      "status": "ready",
       "dependencies": [
         "1.1",
         "1.2"

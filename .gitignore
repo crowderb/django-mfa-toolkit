@@ -13,6 +13,9 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+build/
+dist/
+*.egg-info/
 
 # Django
 *.sqlite3
