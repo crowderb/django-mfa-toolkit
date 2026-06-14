@@ -491,7 +491,7 @@
       "completed_by": "codex:1c4e9a73",
       "completion_summary": "Added concrete TOTPDevice and HOTPDevice models, an initial Django migration, encrypted-secret validation, HOTP non-negative counter enforcement, and database-backed model/migration tests.",
       "branch": "feature/mfa-device-models",
-      "commit": "uncommitted",
+      "commit": "0cd0e87",
       "tests_added": 5
     },
     {
@@ -526,7 +526,7 @@
       "completed_by": "codex:1c4e9a73",
       "completion_summary": "Added atomic model-backed TOTP/HOTP enrollment, verification, and HOTP resynchronization adapters using transaction.atomic and select_for_update, with tests for accepted, failed, replayed, unconfirmed, and resync state transitions.",
       "branch": "feature/mfa-device-models",
-      "commit": "uncommitted",
+      "commit": "0cd0e87",
       "tests_added": 8
     },
     {
