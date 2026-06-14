@@ -33,6 +33,13 @@
       "description": "Defense-in-depth hardening of MVP MFA primitives identified during security audit.",
       "docs": [],
       "prerequisites": []
+    },
+    {
+      "id": "5",
+      "title": "Django Integration Surface",
+      "description": "Django models, state transitions, throttling, session elevation, and local integration checks built on the MVP service primitives.",
+      "docs": [],
+      "prerequisites": []
     }
   ],
   "tasks": [
@@ -416,6 +423,215 @@
       "branch": "main",
       "commit": "uncommitted",
       "tests_added": 1
+    },
+    {
+      "id": "5.1",
+      "section": "5",
+      "title": "Design Django MFA device persistence contracts",
+      "description": "Define the package-owned Django persistence contracts for TOTP and HOTP device state before adding models or login-flow behavior.",
+      "type": "security",
+      "priority": "current",
+      "effort": "small",
+      "status": "done",
+      "dependencies": [
+        "4.3"
+      ],
+      "steps": [
+        "Write a design note describing TOTP and HOTP device fields, encrypted-secret storage, replay state, HOTP counter state, active/confirmed flags, and audit/event boundaries.",
+        "Decide whether the MVP ships concrete models, abstract base models, or service adapters first, and document rejected alternatives.",
+        "Map each persisted field to the service-layer security invariant it supports.",
+        "Add or update tests/checks that validate the design artifact is present and references the relevant invariants."
+      ],
+      "acceptance_criteria": [
+        "The design note names the exact persisted state needed for TOTP replay prevention and HOTP counter advancement without storing raw secrets or OTP submissions.",
+        "The design documents transaction/locking expectations for verification state updates before model code is added.",
+        "A local validation check or focused test fails if the persistence design document is removed or no longer references the required controls."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-14",
+      "completed_at": "2026-06-14",
+      "completed_by": "codex:5d1a8f02",
+      "completion_summary": "Added the Django MFA device persistence contract design covering concrete model direction, required TOTP/HOTP persisted state, audit boundaries, transaction locking expectations, and a local design-doc validation test.",
+      "branch": "feature/design-mfa-device-persistence",
+      "commit": "pending",
+      "tests_added": 1
+    },
+    {
+      "id": "5.2",
+      "section": "5",
+      "title": "Implement Django MFA device models and migrations",
+      "description": "Add Django model storage for TOTP and HOTP devices using the persistence contract from 5.1.",
+      "type": "feature",
+      "priority": "high",
+      "effort": "medium",
+      "status": "ready",
+      "dependencies": [
+        "5.1"
+      ],
+      "steps": [
+        "Create model classes for TOTP and HOTP device state with encrypted persisted_secret fields, user ownership, confirmation state, timestamps, and the replay/counter fields identified in the design.",
+        "Add migrations without embedding real secrets, OTPs, or production-looking fixture values.",
+        "Add model-level helpers or constraints that prevent negative counters and preserve per-user device identity.",
+        "Add focused model tests for secret non-disclosure, default state, constraints, and migration importability."
+      ],
+      "acceptance_criteria": [
+        "TOTP model state can persist encrypted secrets and last_accepted_timecode without exposing raw secret material.",
+        "HOTP model state can persist encrypted secrets and hotp_counter with non-negative counter enforcement.",
+        "The Django test suite covers model creation, validation constraints, and migrations with synthetic data only."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-14"
+    },
+    {
+      "id": "5.3",
+      "section": "5",
+      "title": "Add atomic device enrollment and verification adapters",
+      "description": "Wrap the service primitives with Django model adapters that perform enrollment and verification state transitions atomically.",
+      "type": "feature",
+      "priority": "high",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "5.2"
+      ],
+      "steps": [
+        "Add enrollment adapters that create unconfirmed device records from TOTP and HOTP enrollment results.",
+        "Add TOTP verification adapter that locks the device row, calls verify_totp, and persists last_accepted_timecode only on success.",
+        "Add HOTP verification and resynchronization adapters that lock the device row and persist hotp_counter only on accepted results.",
+        "Add concurrency-focused tests proving failed, replayed, and invalid attempts do not advance persisted state."
+      ],
+      "acceptance_criteria": [
+        "Accepted TOTP verification updates replay state exactly once and replayed codes remain rejected.",
+        "Accepted HOTP verification/resync updates the counter exactly once and failed attempts leave the counter unchanged.",
+        "State-changing adapters use a documented transaction/locking boundary and are covered by Django database tests."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-14"
+    },
+    {
+      "id": "5.4",
+      "section": "5",
+      "title": "Integrate throttling and lockout controls for MFA attempts",
+      "description": "Provide a local Django throttling boundary for MFA verification attempts so callers do not have to invent rate limiting around OTP checks.",
+      "type": "security",
+      "priority": "high",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "5.3"
+      ],
+      "steps": [
+        "Design a small throttle API backed by Django cache or another existing Django primitive, with caller-controlled scope keys for users/devices.",
+        "Apply throttling before expensive OTP verification while avoiding storage of raw submitted OTPs.",
+        "Return typed throttle/lockout outcomes that integration code can distinguish from invalid OTP results.",
+        "Add tests for allowed attempts, blocked attempts, reset behavior, and no raw OTP leakage in throttle keys or values."
+      ],
+      "acceptance_criteria": [
+        "Verification adapters can be configured to reject over-limit attempts before running TOTP/HOTP HMAC loops.",
+        "Throttle state never stores raw OTP submissions, raw secrets, or production credentials.",
+        "Focused tests cover success, failure, lockout, reset, and interaction with replay/counter state."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-14"
+    },
+    {
+      "id": "5.5",
+      "section": "5",
+      "title": "Add session elevation helpers for post-MFA state",
+      "description": "Provide Django helpers for marking and checking post-MFA session elevation without weakening Django session or CSRF defaults.",
+      "type": "security",
+      "priority": "high",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "5.4"
+      ],
+      "steps": [
+        "Design the session keys, timestamp handling, and invalidation expectations for pre-MFA and post-MFA authentication state.",
+        "Add helpers that mark MFA completion, check freshness, and clear elevation on logout or explicit reset.",
+        "Add local Django test-client tests for pre-MFA denial, post-MFA access, stale elevation rejection, and logout cleanup.",
+        "Document integration expectations without disabling Django authentication middleware, CSRF, password handling, or secure cookie defaults."
+      ],
+      "acceptance_criteria": [
+        "Session elevation is represented as a separate boundary from password authentication and can expire independently.",
+        "Tests prove protected flows reject pre-MFA sessions and stale post-MFA sessions.",
+        "The implementation does not weaken Django security defaults or require applications to disable middleware protections."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-14"
+    },
+    {
+      "id": "5.6",
+      "section": "5",
+      "title": "Add local Django integration verification checks",
+      "description": "Extend the fixture-bound verification model to cover persisted devices, throttling, and session elevation using Django test clients and synthetic users.",
+      "type": "security",
+      "priority": "medium",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "5.5"
+      ],
+      "steps": [
+        "Extend django_mfa_toolkit.security_invariants with controls for persisted device state, throttling/lockout, and session elevation.",
+        "Add pytest fixtures for synthetic users, synthetic persisted TOTP/HOTP devices, and local protected views.",
+        "Add in-process checks proving MFA enforcement, throttle enforcement, replay rejection, and session elevation boundaries.",
+        "Document that the checks remain local and do not accept target URLs, hosts, credentials, or arbitrary payloads."
+      ],
+      "acceptance_criteria": [
+        "Security invariant tests cover persisted-device verification, throttling, and session elevation with local fixtures only.",
+        "No verification helper accepts arbitrary network targets, credentials, or payload lists.",
+        "The integration guide points developers and agents to the new local checks."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-14"
+    },
+    {
+      "id": "5.7",
+      "section": "5",
+      "title": "Document end-to-end Django MFA integration path",
+      "description": "Update the agent-followable guide with the completed model, adapter, throttling, and session-elevation integration path.",
+      "type": "enhancement",
+      "priority": "medium",
+      "effort": "small",
+      "status": "backlog",
+      "dependencies": [
+        "5.6"
+      ],
+      "steps": [
+        "Update the MVP integration guide to show model-backed TOTP and HOTP enrollment, verification, and resynchronization flows.",
+        "Add examples for throttle configuration, post-MFA session elevation, and local verification commands.",
+        "Document operational guidance for audit records, lockout handling, key rotation, and avoiding logged OTP/secret material.",
+        "Run documentation-adjacent tests or smoke checks that validate referenced modules and commands still exist."
+      ],
+      "acceptance_criteria": [
+        "The guide describes a complete local Django integration path from enrollment through protected post-MFA access.",
+        "The guide includes exact validation commands for each integration layer.",
+        "Documentation examples use pseudo values only and do not contain raw secrets, OTPs, or production credentials."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-14"
     }
   ]
 }
