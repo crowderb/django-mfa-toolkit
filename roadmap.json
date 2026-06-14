@@ -456,7 +456,7 @@
       "completed_by": "codex:5d1a8f02",
       "completion_summary": "Added the Django MFA device persistence contract design covering concrete model direction, required TOTP/HOTP persisted state, audit boundaries, transaction locking expectations, and a local design-doc validation test.",
       "branch": "feature/design-mfa-device-persistence",
-      "commit": "pending",
+      "commit": "42202a2",
       "tests_added": 1
     },
     {
