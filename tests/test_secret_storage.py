@@ -98,6 +98,12 @@ def test_malformed_ciphertext_charset_is_rejected():
             EncryptedSecret.parse("v1:test-key:not base64url!!")
 
 
+def test_malformed_ciphertext_padding_is_rejected_by_parse():
+    with override_settings(**encryption_settings()):
+        with pytest.raises(SecretDecryptionError):
+            EncryptedSecret.parse("v1:test-key:A===")
+
+
 def test_decrypt_secret_text_rejects_non_ascii_ciphertext():
     with override_settings(**encryption_settings()):
         with pytest.raises(SecretDecryptionError):

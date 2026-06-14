@@ -1,7 +1,7 @@
 {
   "$schema_version": "1.0",
   "project": "django-mfa-toolkit",
-  "last_updated": "2026-06-13",
+  "last_updated": "2026-06-14",
   "priorities": "",
   "notes": [],
   "references": [],
@@ -383,6 +383,39 @@
       "branch": "feature/mfa-bounds-and-ciphertext-validation",
       "commit": "32aeb87",
       "tests_added": 2
+    },
+    {
+      "id": "4.3",
+      "section": "4",
+      "title": "Validate ciphertext base64 syntax during EncryptedSecret.parse",
+      "description": "Tighten the 4.2 ciphertext validation so EncryptedSecret.parse rejects malformed urlsafe-base64 syntax, including invalid padding, instead of only checking the ciphertext character set.",
+      "type": "security",
+      "priority": "current",
+      "effort": "tiny",
+      "status": "done",
+      "dependencies": [
+        "4.2"
+      ],
+      "steps": [
+        "Replace the ciphertext regex-only validation with a helper that performs ASCII encoding and strict urlsafe-base64 decoding.",
+        "Call the helper from EncryptedSecret.parse after the empty ciphertext check and before returning the parsed value.",
+        "Add a focused regression test proving malformed padding is rejected by EncryptedSecret.parse."
+      ],
+      "acceptance_criteria": [
+        "EncryptedSecret.parse raises SecretDecryptionError for non-ASCII ciphertext, malformed-character ciphertext, and malformed urlsafe-base64 padding.",
+        "Fernet authentication and token-integrity failures remain handled by decrypt_secret as SecretDecryptionError."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-14",
+      "completed_at": "2026-06-14",
+      "completed_by": "codex:7a8c9d21",
+      "completion_summary": "Tightened EncryptedSecret.parse ciphertext validation to use strict urlsafe-base64 decoding and added a malformed-padding regression test.",
+      "branch": "main",
+      "commit": "uncommitted",
+      "tests_added": 1
     }
   ]
 }
