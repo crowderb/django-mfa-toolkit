@@ -7,6 +7,8 @@ from django_mfa_toolkit.hotp import enroll_hotp, resync_hotp, verify_hotp
 from django_mfa_toolkit.secret_storage import decrypt_secret_text
 from django_mfa_toolkit.security_invariants import (
     FORBIDDEN_TARGET_PARAMETER_NAMES,
+    get_control_relationships,
+    get_mfa_control_graph,
     get_mvp_control_requirements,
     run_local_security_invariant_checks,
 )
@@ -37,6 +39,40 @@ def test_mvp_control_requirements_cover_required_totp_and_hotp_safeguards():
         "django-throttling.lockout",
         "django-session-elevation.boundary",
     }.issubset(requirement_ids)
+
+
+def test_mfa_control_graph_represents_existing_requirements():
+    graph = get_mfa_control_graph()
+    node_ids = {node.id for node in graph.nodes}
+    requirement_ids = {requirement.id for requirement in get_mvp_control_requirements()}
+
+    assert requirement_ids.issubset(node_ids)
+    assert graph.relationships
+    assert all(relationship.source in node_ids for relationship in graph.relationships)
+    assert all(relationship.target in node_ids for relationship in graph.relationships)
+
+
+def test_mfa_control_graph_represents_compensating_lockout_controls():
+    totp_relationships = get_control_relationships("totp.verification")
+    hotp_relationships = get_control_relationships("hotp.verification")
+
+    assert {
+        ("django-throttling.lockout", "satisfied-by-any"),
+        ("compensating-control.documented-lockout", "satisfied-by-any"),
+    }.issubset({(relationship.target, relationship.kind) for relationship in totp_relationships})
+    assert {
+        ("django-throttling.lockout", "satisfied-by-any"),
+        ("compensating-control.documented-lockout", "satisfied-by-any"),
+    }.issubset({(relationship.target, relationship.kind) for relationship in hotp_relationships})
+
+
+def test_mfa_control_graph_links_audit_persistence_to_audit_records_and_model():
+    relationships = get_control_relationships("hotp.audit-persistence")
+
+    assert {
+        ("hotp.audit", "requires"),
+        ("implementation.audit-model", "implemented-by"),
+    }.issubset({(relationship.target, relationship.kind) for relationship in relationships})
 
 
 def test_public_verification_surface_has_no_targetable_inputs():
