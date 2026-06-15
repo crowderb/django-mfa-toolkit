@@ -92,3 +92,29 @@ def test_audit_persistence_contracts_cover_hotp_audit_boundary():
     missing_terms = sorted(term for term in required_terms if term not in content)
 
     assert not missing_terms
+
+
+def test_control_graph_design_covers_agent_reasoning_model():
+    document = ROOT_DIR / ".docs" / "design" / "control-graph.md"
+    content = document.read_text(encoding="utf-8")
+
+    required_terms = {
+        "get_mfa_control_graph()",
+        "ControlGraphNode",
+        "ControlGraphRelationship",
+        "requires",
+        "implemented-by",
+        "verified-by",
+        "satisfied-by-any",
+        "compensating-control.documented-lockout",
+        "django-throttling.lockout",
+        "hotp.audit-persistence",
+        "verification-surface.not-targetable",
+        "fixture-bound",
+        "target URLs",
+        "credentials",
+    }
+
+    missing_terms = sorted(term for term in required_terms if term not in content)
+
+    assert not missing_terms

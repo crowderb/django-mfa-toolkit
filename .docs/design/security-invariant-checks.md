@@ -5,7 +5,7 @@ Date: 2026-06-13
 
 ## Scope
 
-The MVP security invariant checks are local, fixture-bound, and in-process. They are implemented as pytest tests and the static control representation in `django_mfa_toolkit.security_invariants`.
+The MVP security invariant checks are local, fixture-bound, and in-process. They are implemented as pytest tests, the static control requirement representation, and the machine-readable control graph in `django_mfa_toolkit.security_invariants`.
 
 They do not accept target URLs, hosts, credentials, arbitrary payloads, or network destinations.
 
@@ -20,6 +20,11 @@ The first control-dependency representation covers:
 - HOTP replay rejection for spent counters;
 - HOTP audit records for verification and resynchronization attempts;
 - bounded HOTP resynchronization with consecutive submissions.
+- Django session elevation as a separate post-MFA boundary;
+- optional HOTP audit persistence;
+- non-targetable verification helpers.
+
+The graph representation is documented in `.docs/design/control-graph.md`.
 
 ## Verification Model
 
