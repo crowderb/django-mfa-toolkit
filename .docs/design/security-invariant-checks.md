@@ -32,4 +32,20 @@ Dynamic checks use synthetic Django settings, synthetic TOTP/HOTP enrollments, d
 
 The checks intentionally do not provide a CLI, scanner, URL input, host input, credential input, or arbitrary payload input. Future agent-facing verification helpers must keep the same boundary unless a later design record documents an equivalent non-targetable interface.
 
-Session-boundary controls are not implemented in the MVP service surface yet. When session elevation behavior is added, it must be represented here with local Django test-client checks.
+Downstream projects can reuse the local Django integration helper surface in
+`django_mfa_toolkit.integration_checks`. The helper surface is designed for
+pytest or Django test cases that already create synthetic users, synthetic MFA
+devices, and in-process Django test-client responses.
+
+Reusable helpers include:
+
+- `run_local_django_mfa_integration_checks()`, which returns structured local
+  results for synthetic TOTP and HOTP device replay checks;
+- `MFALocalIntegrationCheckMixin.assert_totp_device_rejects_replay()`;
+- `MFALocalIntegrationCheckMixin.assert_hotp_device_rejects_replay_without_counter_advance()`;
+- `MFALocalIntegrationCheckMixin.assert_mfa_required_session_boundary()`;
+- `MFALocalIntegrationCheckMixin.assert_local_security_invariants_pass()`.
+
+These helpers intentionally accept local objects and response objects only. They
+do not accept URLs, hosts, credentials, arbitrary payload lists, or network
+destinations.

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from inspect import signature
 from typing import Literal
 
-from django_mfa_toolkit import device_adapters, hotp, session_elevation, totp
+from django_mfa_toolkit import device_adapters, hotp, integration_checks, session_elevation, totp
 
 
 FORBIDDEN_TARGET_PARAMETER_NAMES = frozenset(
@@ -493,6 +493,11 @@ def _surface_has_no_target_parameters() -> SecurityInvariantCheck:
         session_elevation.clear_mfa_elevation,
         session_elevation.mfa_required,
         run_local_security_invariant_checks,
+        integration_checks.run_local_django_mfa_integration_checks,
+        integration_checks.MFALocalIntegrationCheckMixin.assert_local_security_invariants_pass,
+        integration_checks.MFALocalIntegrationCheckMixin.assert_totp_device_rejects_replay,
+        integration_checks.MFALocalIntegrationCheckMixin.assert_hotp_device_rejects_replay_without_counter_advance,
+        integration_checks.MFALocalIntegrationCheckMixin.assert_mfa_required_session_boundary,
     )
     discovered = sorted(
         {

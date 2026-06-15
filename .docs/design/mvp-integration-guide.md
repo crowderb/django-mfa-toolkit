@@ -181,6 +181,54 @@ Use equivalent HOTP verification with `verify_hotp_device()` when the selected
 device is a hardware token. The post-MFA session marker is separate from the
 Django authenticated session and should expire independently.
 
+### Reusable Local Integration Checks
+
+Downstream projects can import fixture-bound helpers for their own pytest or
+Django test suites:
+
+```python
+from django_mfa_toolkit.integration_checks import (
+    MFALocalIntegrationCheckMixin,
+    run_local_django_mfa_integration_checks,
+)
+
+
+def test_mfa_device_replay_controls(synthetic_totp_device, synthetic_hotp_device):
+    results = run_local_django_mfa_integration_checks(
+        totp_device=synthetic_totp_device,
+        hotp_device=synthetic_hotp_device,
+    )
+
+    assert all(result.passed for result in results)
+
+
+class TestMFASessionBoundary(MFALocalIntegrationCheckMixin):
+    def test_mfa_boundary(self, local_client_flow):
+        self.assert_mfa_required_session_boundary(
+            anonymous_response=local_client_flow.anonymous_response,
+            verified_response=local_client_flow.verified_response,
+            protected_response=local_client_flow.protected_response,
+            replay_response=local_client_flow.replay_response,
+        )
+```
+
+The helpers must be called from local tests that create synthetic users,
+synthetic devices, and in-process Django test-client responses. They intentionally
+do not accept URLs, hosts, credentials, arbitrary payload lists, or network
+destinations.
+
+Run the toolkit helper tests with:
+
+```bash
+uv run pytest tests/test_integration_checks.py tests/test_security_invariants.py
+```
+
+Run the complete local verification suite with:
+
+```bash
+uv run pytest
+```
+
 ### HOTP Resynchronization
 
 ```python
