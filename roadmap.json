@@ -773,7 +773,7 @@
       "type": "security",
       "priority": "medium",
       "effort": "medium",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "6.2"
       ],
@@ -792,7 +792,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-15"
+      "created_at": "2026-06-15",
+      "completed_at": "2026-06-15",
+      "completed_by": "codex:1b793f4e",
+      "completion_summary": "Added opt-in HOTP audit persistence to verify_hotp_device and resync_hotp_device with persist_audit=True, preserving default behavior and existing return values; audit rows are created inside the adapter transaction so persistence failures roll back accepted counter updates; added adapter coverage for success, invalid, replay, throttled, resync, no-OTP persistence, default no-audit behavior, and rollback semantics.",
+      "branch": "feature/adapter-audit-persistence",
+      "commit": "e1ead6e",
+      "tests_added": 8
     },
     {
       "id": "7.1",

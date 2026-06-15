@@ -13,7 +13,7 @@ from django_mfa_toolkit.device_adapters import (
     verify_hotp_device,
     verify_totp_device,
 )
-from django_mfa_toolkit.models import HOTPDevice, TOTPDevice
+from django_mfa_toolkit.models import HOTPDevice, MFAAuditEvent, TOTPDevice
 from django_mfa_toolkit.secret_storage import decrypt_secret_text
 
 
@@ -151,6 +151,59 @@ def test_hotp_device_verification_updates_counter_atomically(
 
 
 @pytest.mark.django_db
+def test_hotp_device_verification_persists_success_audit_when_requested(
+    synthetic_mfa_settings_override,
+    django_user_model,
+):
+    user = django_user_model.objects.create_user(username="hotp-audit-success-user")
+    enrolled = enroll_hotp_device(
+        user=user,
+        account_name="hotp@example.test",
+        issuer_name="Toolkit",
+    )
+    HOTPDevice.objects.filter(pk=enrolled.device.pk).update(confirmed_at=django_timezone.now())
+    secret = decrypt_secret_text(enrolled.device.persisted_secret)
+    code = pyotp.HOTP(secret).at(0)
+
+    result = verify_hotp_device(
+        device=enrolled.device,
+        submitted_code=code,
+        look_ahead=0,
+        persist_audit=True,
+    )
+
+    event = MFAAuditEvent.objects.get(device=enrolled.device)
+
+    assert result.accepted is True
+    assert event.event_type == MFAAuditEvent.EventType.VERIFICATION
+    assert event.submitted_outcome == "accepted"
+    assert event.result_classification == "success"
+    assert event.server_counter == 0
+    assert event.next_counter == 1
+
+
+@pytest.mark.django_db
+def test_hotp_device_verification_does_not_persist_audit_by_default(
+    synthetic_mfa_settings_override,
+    django_user_model,
+):
+    user = django_user_model.objects.create_user(username="hotp-no-default-audit-user")
+    enrolled = enroll_hotp_device(
+        user=user,
+        account_name="hotp@example.test",
+        issuer_name="Toolkit",
+    )
+    HOTPDevice.objects.filter(pk=enrolled.device.pk).update(confirmed_at=django_timezone.now())
+    secret = decrypt_secret_text(enrolled.device.persisted_secret)
+    code = pyotp.HOTP(secret).at(0)
+
+    result = verify_hotp_device(device=enrolled.device, submitted_code=code, look_ahead=0)
+
+    assert result.accepted is True
+    assert MFAAuditEvent.objects.filter(device=enrolled.device).exists() is False
+
+
+@pytest.mark.django_db
 def test_hotp_device_failed_and_replayed_attempts_do_not_advance_counter(
     synthetic_mfa_settings_override,
     django_user_model,
@@ -176,6 +229,66 @@ def test_hotp_device_failed_and_replayed_attempts_do_not_advance_counter(
     assert replayed.accepted is False
     assert replayed.audit_record.result_classification == "replay"
     assert enrolled.device.hotp_counter == accepted.next_counter
+
+
+@pytest.mark.django_db
+def test_hotp_device_verification_persists_failed_and_replayed_audits_without_otp(
+    synthetic_mfa_settings_override,
+    django_user_model,
+):
+    user = django_user_model.objects.create_user(username="hotp-audit-failure-user")
+    enrolled = enroll_hotp_device(
+        user=user,
+        account_name="hotp@example.test",
+        issuer_name="Toolkit",
+    )
+    HOTPDevice.objects.filter(pk=enrolled.device.pk).update(confirmed_at=django_timezone.now())
+    secret = decrypt_secret_text(enrolled.device.persisted_secret)
+    code = pyotp.HOTP(secret).at(0)
+
+    accepted = verify_hotp_device(
+        device=enrolled.device,
+        submitted_code=code,
+        look_ahead=0,
+        persist_audit=True,
+    )
+    invalid = verify_hotp_device(
+        device=enrolled.device,
+        submitted_code="000000",
+        look_ahead=0,
+        persist_audit=True,
+    )
+    replayed = verify_hotp_device(
+        device=enrolled.device,
+        submitted_code=code,
+        look_ahead=0,
+        replay_window=1,
+        persist_audit=True,
+    )
+
+    events = list(MFAAuditEvent.objects.filter(device=enrolled.device).order_by("id"))
+    stored_values = " ".join(
+        str(value)
+        for event in events
+        for value in (
+            event.submitted_outcome,
+            event.result_classification,
+            event.server_counter,
+            event.matched_counter,
+            event.next_counter,
+            event.look_ahead,
+            event.replay_window,
+        )
+    )
+
+    assert accepted.accepted is True
+    assert invalid.accepted is False
+    assert replayed.accepted is False
+    assert [event.result_classification for event in events] == ["success", "invalid", "replay"]
+    assert "000000" not in stored_values
+    assert code not in stored_values
+    assert secret not in stored_values
+    assert enrolled.device.persisted_secret not in stored_values
 
 
 @pytest.mark.django_db
@@ -211,6 +324,49 @@ def test_hotp_device_resync_updates_counter_only_on_success(
     assert accepted.accepted is True
     assert accepted.next_counter == 12
     assert enrolled.device.hotp_counter == 12
+
+
+@pytest.mark.django_db
+def test_hotp_device_resync_persists_audit_when_requested(
+    synthetic_mfa_settings_override,
+    django_user_model,
+):
+    user = django_user_model.objects.create_user(username="hotp-resync-audit-user")
+    enrolled = enroll_hotp_device(
+        user=user,
+        account_name="hotp@example.test",
+        issuer_name="Toolkit",
+        initial_counter=3,
+    )
+    HOTPDevice.objects.filter(pk=enrolled.device.pk).update(confirmed_at=django_timezone.now())
+    secret = decrypt_secret_text(enrolled.device.persisted_secret)
+    hotp = pyotp.HOTP(secret)
+
+    failed = resync_hotp_device(
+        device=enrolled.device,
+        submitted_codes=[hotp.at(10), hotp.at(12)],
+        search_window=20,
+        persist_audit=True,
+    )
+    accepted = resync_hotp_device(
+        device=enrolled.device,
+        submitted_codes=[hotp.at(10), hotp.at(11)],
+        search_window=20,
+        persist_audit=True,
+    )
+
+    events = list(MFAAuditEvent.objects.filter(device=enrolled.device).order_by("id"))
+
+    assert failed.accepted is False
+    assert accepted.accepted is True
+    assert [event.event_type for event in events] == [
+        MFAAuditEvent.EventType.RESYNCHRONIZATION,
+        MFAAuditEvent.EventType.RESYNCHRONIZATION,
+    ]
+    assert [event.result_classification for event in events] == ["invalid", "resync_success"]
+    assert events[0].submitted_count == 2
+    assert events[1].search_window == 20
+    assert events[1].next_counter == 12
 
 
 @pytest.mark.django_db
@@ -352,6 +508,45 @@ def test_hotp_device_throttle_returns_typed_lockout_without_advancing_counter(
 
 
 @pytest.mark.django_db
+def test_hotp_device_throttle_persists_audit_without_advancing_counter(
+    synthetic_mfa_settings_override,
+    django_user_model,
+):
+    user = django_user_model.objects.create_user(username="hotp-throttle-audit-user")
+    enrolled = enroll_hotp_device(
+        user=user,
+        account_name="hotp@example.test",
+        issuer_name="Toolkit",
+    )
+    HOTPDevice.objects.filter(pk=enrolled.device.pk).update(confirmed_at=django_timezone.now())
+    throttle_scope = f"hotp-audit:{enrolled.device.pk}"
+
+    verify_hotp_device(
+        device=enrolled.device,
+        submitted_code="000000",
+        look_ahead=0,
+        throttle_scope=throttle_scope,
+        throttle_limit=1,
+    )
+    throttled = verify_hotp_device(
+        device=enrolled.device,
+        submitted_code="111111",
+        look_ahead=0,
+        throttle_scope=throttle_scope,
+        throttle_limit=1,
+        persist_audit=True,
+    )
+
+    enrolled.device.refresh_from_db()
+    event = MFAAuditEvent.objects.get(device=enrolled.device)
+
+    assert throttled.accepted is False
+    assert event.result_classification == "throttled"
+    assert event.next_counter == 0
+    assert enrolled.device.hotp_counter == 0
+
+
+@pytest.mark.django_db
 def test_hotp_resync_throttle_returns_typed_lockout_without_advancing_counter(
     synthetic_mfa_settings_override,
     django_user_model,
@@ -396,6 +591,122 @@ def test_hotp_resync_throttle_returns_typed_lockout_without_advancing_counter(
     assert throttled.accepted is False
     assert throttled.audit_record.result_classification == "throttled"
     assert throttled.next_counter == 3
+    assert enrolled.device.hotp_counter == 3
+
+
+@pytest.mark.django_db
+def test_hotp_resync_throttle_persists_audit_without_advancing_counter(
+    synthetic_mfa_settings_override,
+    django_user_model,
+):
+    user = django_user_model.objects.create_user(username="hotp-resync-throttle-audit-user")
+    enrolled = enroll_hotp_device(
+        user=user,
+        account_name="hotp@example.test",
+        issuer_name="Toolkit",
+        initial_counter=3,
+    )
+    HOTPDevice.objects.filter(pk=enrolled.device.pk).update(confirmed_at=django_timezone.now())
+    secret = decrypt_secret_text(enrolled.device.persisted_secret)
+    hotp = pyotp.HOTP(secret)
+    throttle_scope = f"hotp-resync-audit:{enrolled.device.pk}"
+
+    resync_hotp_device(
+        device=enrolled.device,
+        submitted_codes=[hotp.at(10), hotp.at(12)],
+        search_window=20,
+        throttle_scope=throttle_scope,
+        throttle_limit=1,
+    )
+    throttled = resync_hotp_device(
+        device=enrolled.device,
+        submitted_codes=[hotp.at(10), hotp.at(11)],
+        search_window=20,
+        throttle_scope=throttle_scope,
+        throttle_limit=1,
+        persist_audit=True,
+    )
+
+    enrolled.device.refresh_from_db()
+    event = MFAAuditEvent.objects.get(device=enrolled.device)
+
+    assert throttled.accepted is False
+    assert event.event_type == MFAAuditEvent.EventType.RESYNCHRONIZATION
+    assert event.result_classification == "throttled"
+    assert event.next_counter == 3
+    assert enrolled.device.hotp_counter == 3
+
+
+@pytest.mark.django_db
+def test_hotp_audit_persistence_failure_rolls_back_counter_update(
+    synthetic_mfa_settings_override,
+    django_user_model,
+    monkeypatch,
+):
+    user = django_user_model.objects.create_user(username="hotp-audit-rollback-user")
+    enrolled = enroll_hotp_device(
+        user=user,
+        account_name="hotp@example.test",
+        issuer_name="Toolkit",
+    )
+    HOTPDevice.objects.filter(pk=enrolled.device.pk).update(confirmed_at=django_timezone.now())
+    secret = decrypt_secret_text(enrolled.device.persisted_secret)
+    code = pyotp.HOTP(secret).at(0)
+
+    from django_mfa_toolkit import device_adapters
+
+    def fail_audit_persistence(**kwargs):
+        raise RuntimeError("audit persistence failed")
+
+    monkeypatch.setattr(device_adapters, "create_hotp_audit_event", fail_audit_persistence)
+
+    with pytest.raises(RuntimeError, match="audit persistence failed"):
+        verify_hotp_device(
+            device=enrolled.device,
+            submitted_code=code,
+            look_ahead=0,
+            persist_audit=True,
+        )
+
+    enrolled.device.refresh_from_db()
+
+    assert enrolled.device.hotp_counter == 0
+
+
+@pytest.mark.django_db
+def test_hotp_resync_audit_persistence_failure_rolls_back_counter_update(
+    synthetic_mfa_settings_override,
+    django_user_model,
+    monkeypatch,
+):
+    user = django_user_model.objects.create_user(username="hotp-resync-audit-rollback-user")
+    enrolled = enroll_hotp_device(
+        user=user,
+        account_name="hotp@example.test",
+        issuer_name="Toolkit",
+        initial_counter=3,
+    )
+    HOTPDevice.objects.filter(pk=enrolled.device.pk).update(confirmed_at=django_timezone.now())
+    secret = decrypt_secret_text(enrolled.device.persisted_secret)
+    hotp = pyotp.HOTP(secret)
+
+    from django_mfa_toolkit import device_adapters
+
+    def fail_audit_persistence(**kwargs):
+        raise RuntimeError("resync audit persistence failed")
+
+    monkeypatch.setattr(device_adapters, "create_hotp_resync_audit_event", fail_audit_persistence)
+
+    with pytest.raises(RuntimeError, match="resync audit persistence failed"):
+        resync_hotp_device(
+            device=enrolled.device,
+            submitted_codes=[hotp.at(10), hotp.at(11)],
+            search_window=20,
+            persist_audit=True,
+        )
+
+    enrolled.device.refresh_from_db()
+
     assert enrolled.device.hotp_counter == 3
 
 
