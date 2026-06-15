@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from django_mfa_toolkit.device_adapters import verify_hotp_device, verify_totp_device
 from django_mfa_toolkit.models import HOTPDevice, TOTPDevice
+from django_mfa_toolkit.recovery_codes import RecoveryCodeBatchEnrollment, verify_recovery_code
 from django_mfa_toolkit.secret_storage import decrypt_secret_text
 
 
@@ -113,11 +114,50 @@ class MFALocalIntegrationCheckMixin:
         if replay_response.status_code != forbidden_status:
             raise AssertionError("Expected protected view to reject the replayed or non-elevated client request.")
 
+    def assert_recovery_code_rejects_replay(
+        self,
+        *,
+        user,
+        enrollment: RecoveryCodeBatchEnrollment,
+    ) -> None:
+        submitted_code = enrollment.codes[0]
+
+        accepted = verify_recovery_code(user=user, submitted_code=submitted_code)
+        replayed = verify_recovery_code(user=user, submitted_code=submitted_code)
+
+        if not accepted.accepted:
+            raise AssertionError(f"Expected synthetic recovery-code check to accept the first code: {accepted}")
+        if replayed.accepted or replayed.failure_reason != "replay":
+            raise AssertionError(f"Expected synthetic recovery-code check to reject replay: {replayed}")
+
+    def assert_recovery_code_session_boundary(
+        self,
+        *,
+        anonymous_response,
+        verified_response,
+        protected_response,
+        replay_response,
+        forbidden_status: int = 403,
+        verified_status: int = 204,
+        protected_status: int = 200,
+    ) -> None:
+        self.assert_mfa_required_session_boundary(
+            anonymous_response=anonymous_response,
+            verified_response=verified_response,
+            protected_response=protected_response,
+            replay_response=replay_response,
+            forbidden_status=forbidden_status,
+            verified_status=verified_status,
+            protected_status=protected_status,
+        )
+
 
 def run_local_django_mfa_integration_checks(
     *,
     totp_device: TOTPDevice | None = None,
     hotp_device: HOTPDevice | None = None,
+    recovery_code_user=None,
+    recovery_code_enrollment: RecoveryCodeBatchEnrollment | None = None,
     at_time: datetime | None = None,
 ) -> tuple[LocalIntegrationCheckResult, ...]:
     """Run local integration checks against caller-provided synthetic devices."""
@@ -136,6 +176,16 @@ def run_local_django_mfa_integration_checks(
             _check_result(
                 "django-integration.hotp-replay-counter",
                 lambda: mixin.assert_hotp_device_rejects_replay_without_counter_advance(hotp_device),
+            )
+        )
+    if recovery_code_user is not None and recovery_code_enrollment is not None:
+        results.append(
+            _check_result(
+                "django-integration.recovery-code-replay",
+                lambda: mixin.assert_recovery_code_rejects_replay(
+                    user=recovery_code_user,
+                    enrollment=recovery_code_enrollment,
+                ),
             )
         )
     return tuple(results)

@@ -22,6 +22,8 @@ The first control-dependency representation covers:
 - bounded HOTP resynchronization with consecutive submissions.
 - Django session elevation as a separate post-MFA boundary;
 - optional HOTP audit persistence;
+- recovery-code hashed storage, one-time use, replay prevention, throttling,
+  audit, and session elevation;
 - non-targetable verification helpers.
 
 The graph representation is documented in `.docs/design/control-graph.md`.
@@ -40,9 +42,11 @@ devices, and in-process Django test-client responses.
 Reusable helpers include:
 
 - `run_local_django_mfa_integration_checks()`, which returns structured local
-  results for synthetic TOTP and HOTP device replay checks;
+  results for synthetic TOTP, HOTP, and recovery-code replay checks;
 - `MFALocalIntegrationCheckMixin.assert_totp_device_rejects_replay()`;
 - `MFALocalIntegrationCheckMixin.assert_hotp_device_rejects_replay_without_counter_advance()`;
+- `MFALocalIntegrationCheckMixin.assert_recovery_code_rejects_replay()`;
+- `MFALocalIntegrationCheckMixin.assert_recovery_code_session_boundary()`;
 - `MFALocalIntegrationCheckMixin.assert_mfa_required_session_boundary()`;
 - `MFALocalIntegrationCheckMixin.assert_local_security_invariants_pass()`.
 

@@ -55,6 +55,13 @@ The graph includes the existing MVP controls:
 - `django-persistence.stateful-verification`;
 - `django-throttling.lockout`;
 - `django-session-elevation.boundary`;
+- `recovery-code.hashed-at-rest`;
+- `recovery-code.constant-time`;
+- `recovery-code.one-time-use`;
+- `recovery-code.replay-prevention`;
+- `recovery-code.throttling`;
+- `recovery-code.audit`;
+- `recovery-code.session-elevation`;
 - `verification-surface.not-targetable`.
 
 It also adds graph-level grouping and implementation nodes:
@@ -63,10 +70,12 @@ It also adds graph-level grouping and implementation nodes:
 - `totp.verification`;
 - `hotp.verification`;
 - `hotp.audit-persistence`;
+- `recovery-code.verification`;
 - `compensating-control.documented-lockout`;
 - `implementation.secret-storage`;
 - `implementation.device-adapters`;
 - `implementation.audit-model`;
+- `implementation.recovery-codes`;
 - `implementation.session-elevation`;
 - `verification.local-tests`.
 
@@ -96,4 +105,9 @@ Local tests assert that:
   compensating alternatives;
 - HOTP audit persistence requires HOTP audit records and is implemented by the
   audit model;
+- recovery-code verification requires hashed storage, password-hash
+  verification, one-time use, replay prevention, audit records, and
+  recovery-code session elevation;
+- recovery-code verification represents package throttling and documented
+  lockout as compensating alternatives;
 - existing invariant checks continue to pass.

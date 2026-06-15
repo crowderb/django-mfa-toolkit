@@ -4,6 +4,12 @@ from inspect import signature
 import pyotp
 
 from django_mfa_toolkit.hotp import enroll_hotp, resync_hotp, verify_hotp
+from django_mfa_toolkit.recovery_codes import (
+    create_recovery_code_batch,
+    normalize_recovery_code,
+    reset_recovery_code_batch,
+    verify_recovery_code,
+)
 from django_mfa_toolkit.secret_storage import decrypt_secret_text
 from django_mfa_toolkit.security_invariants import (
     FORBIDDEN_TARGET_PARAMETER_NAMES,
@@ -38,6 +44,13 @@ def test_mvp_control_requirements_cover_required_totp_and_hotp_safeguards():
         "django-persistence.stateful-verification",
         "django-throttling.lockout",
         "django-session-elevation.boundary",
+        "recovery-code.hashed-at-rest",
+        "recovery-code.constant-time",
+        "recovery-code.one-time-use",
+        "recovery-code.replay-prevention",
+        "recovery-code.throttling",
+        "recovery-code.audit",
+        "recovery-code.session-elevation",
     }.issubset(requirement_ids)
 
 
@@ -75,6 +88,22 @@ def test_mfa_control_graph_links_audit_persistence_to_audit_records_and_model():
     }.issubset({(relationship.target, relationship.kind) for relationship in relationships})
 
 
+def test_mfa_control_graph_represents_recovery_code_controls():
+    relationships = get_control_relationships("recovery-code.verification")
+
+    assert {
+        ("recovery-code.hashed-at-rest", "requires"),
+        ("recovery-code.constant-time", "requires"),
+        ("recovery-code.one-time-use", "requires"),
+        ("recovery-code.replay-prevention", "requires"),
+        ("recovery-code.audit", "requires"),
+        ("recovery-code.session-elevation", "requires"),
+        ("recovery-code.throttling", "satisfied-by-any"),
+        ("compensating-control.documented-lockout", "satisfied-by-any"),
+        ("verification.local-tests", "verified-by"),
+    }.issubset({(relationship.target, relationship.kind) for relationship in relationships})
+
+
 def test_public_verification_surface_has_no_targetable_inputs():
     surfaces = (
         enroll_totp,
@@ -82,6 +111,10 @@ def test_public_verification_surface_has_no_targetable_inputs():
         enroll_hotp,
         verify_hotp,
         resync_hotp,
+        create_recovery_code_batch,
+        reset_recovery_code_batch,
+        verify_recovery_code,
+        normalize_recovery_code,
         run_local_security_invariant_checks,
     )
 
