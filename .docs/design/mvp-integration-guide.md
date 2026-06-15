@@ -12,8 +12,10 @@ Use the current MVP as a small service boundary:
 - verify TOTP and HOTP codes;
 - resynchronize HOTP counters with bounded drift;
 - keep all verification local, fixture-bound, and in-process.
+- validate Django persistence, throttling, and session-elevation behavior with local synthetic fixtures.
 
 This guide does not define a custom scanner, remote probe, or arbitrary target interface.
+The verification checks do not accept target URLs, hosts, credentials, or arbitrary payload lists.
 
 ## Required Setup
 
@@ -218,7 +220,7 @@ authentication protections.
 Run the narrow test sets while integrating:
 
 ```bash
-uv run pytest tests/test_secret_storage.py tests/test_totp.py tests/test_hotp.py tests/test_security_invariants.py
+uv run pytest tests/test_secret_storage.py tests/test_totp.py tests/test_hotp.py tests/test_security_invariants.py tests/test_django_integration_checks.py
 ```
 
 Run the full suite before merging:

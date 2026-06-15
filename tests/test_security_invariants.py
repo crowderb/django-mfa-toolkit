@@ -33,6 +33,9 @@ def test_mvp_control_requirements_cover_required_totp_and_hotp_safeguards():
         "hotp.replay-prevention",
         "hotp.audit",
         "hotp.resync-bounded",
+        "django-persistence.stateful-verification",
+        "django-throttling.lockout",
+        "django-session-elevation.boundary",
     }.issubset(requirement_ids)
 
 
