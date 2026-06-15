@@ -40,6 +40,34 @@
       "description": "Django models, state transitions, throttling, session elevation, and local integration checks built on the MVP service primitives.",
       "docs": [],
       "prerequisites": []
+    },
+    {
+      "id": "6",
+      "title": "Audit Persistence",
+      "description": "Persist local MFA audit outcomes without storing OTP submissions or raw secrets.",
+      "docs": [],
+      "prerequisites": []
+    },
+    {
+      "id": "7",
+      "title": "Agent Verification",
+      "description": "Make local MFA security controls machine-readable and reusable by downstream Django projects without creating targetable scanner tooling.",
+      "docs": [],
+      "prerequisites": []
+    },
+    {
+      "id": "8",
+      "title": "Recovery Flows",
+      "description": "Design recovery mechanisms that preserve one-time use, throttling, auditability, and secret-storage boundaries.",
+      "docs": [],
+      "prerequisites": []
+    },
+    {
+      "id": "9",
+      "title": "Compatibility",
+      "description": "Evaluate interoperability paths with established Django MFA ecosystem packages without weakening toolkit security invariants.",
+      "docs": [],
+      "prerequisites": []
     }
   ],
   "tasks": [
@@ -668,6 +696,201 @@
       "branch": "feature/end-to-end-mfa-integration-guide",
       "commit": "8f74128",
       "tests_added": 1
+    },
+    {
+      "id": "6.1",
+      "section": "6",
+      "title": "Design Django MFA audit persistence contracts",
+      "description": "Define Django audit persistence for HOTP verification and resynchronization outcomes while preserving the no-OTP/no-raw-secret boundary.",
+      "type": "security",
+      "priority": "current",
+      "effort": "small",
+      "status": "ready",
+      "dependencies": [],
+      "steps": [
+        "Define audit model fields for HOTP verification and HOTP resynchronization outcomes.",
+        "Map fields to HOTPAuditRecord and HOTPResyncAuditRecord.",
+        "Document fields that must not be persisted, including submitted OTPs, raw secrets, and provisioning URIs.",
+        "Specify retention, user/device references, migration expectations, and implementation tests."
+      ],
+      "acceptance_criteria": [
+        "Design note defines audit persistence without storing OTPs or raw secrets.",
+        "The model contract covers success, invalid, replay, throttled, counter-window, resync success, and excessive-drift outcomes.",
+        "Expected implementation tests are listed."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-15"
+    },
+    {
+      "id": "6.2",
+      "section": "6",
+      "title": "Implement Django MFA audit event models",
+      "description": "Add Django models, migrations, and focused tests for persisting MFA audit events without secret or OTP material.",
+      "type": "security",
+      "priority": "current",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "6.1"
+      ],
+      "steps": [
+        "Add audit event model and migration for HOTP verification and resynchronization metadata.",
+        "Add persistence helpers that accept HOTPAuditRecord and HOTPResyncAuditRecord values.",
+        "Keep submitted OTPs, raw secrets, provisioning URIs, and production credentials out of model fields and fixtures.",
+        "Add model, migration, and non-disclosure tests."
+      ],
+      "acceptance_criteria": [
+        "Audit events can be persisted for HOTP verification and resynchronization.",
+        "Audit rows contain classification and counter metadata but no OTP material.",
+        "Tests prove no raw OTP or secret persistence."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-15"
+    },
+    {
+      "id": "6.3",
+      "section": "6",
+      "title": "Integrate optional audit persistence into device adapters",
+      "description": "Allow model-backed HOTP verification and resynchronization adapters to persist audit outcomes while preserving atomic counter behavior.",
+      "type": "security",
+      "priority": "medium",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "6.2"
+      ],
+      "steps": [
+        "Add optional audit persistence hooks to verify_hotp_device and resync_hotp_device.",
+        "Preserve existing return values and backward-compatible behavior when persistence is not requested.",
+        "Define and test audit persistence failure behavior.",
+        "Add adapter tests for success, invalid, replay, throttled, and resync outcomes."
+      ],
+      "acceptance_criteria": [
+        "Device adapters can persist audit records locally.",
+        "Counter updates remain atomic and correct.",
+        "Failed, replayed, throttled, and resync attempts are auditable without storing submitted OTPs."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-15"
+    },
+    {
+      "id": "7.1",
+      "section": "7",
+      "title": "Design machine-readable control graph for MFA safeguards",
+      "description": "Extend the flat invariant representation into explicit control relationships and compensating-control reasoning.",
+      "type": "enhancement",
+      "priority": "medium",
+      "effort": "medium",
+      "status": "ready",
+      "dependencies": [],
+      "steps": [
+        "Design graph nodes and edges for MFA safeguards and acceptable compensating controls.",
+        "Represent dependencies such as verification requiring throttling or a documented compensating control.",
+        "Include audit persistence, session elevation, replay prevention, and secret storage controls.",
+        "Document how agents should interpret missing controls and proposed remedies."
+      ],
+      "acceptance_criteria": [
+        "Control relationships are machine-readable.",
+        "Compensating-control logic is represented explicitly.",
+        "Existing invariant tests continue to pass or have a documented migration path."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-15"
+    },
+    {
+      "id": "7.2",
+      "section": "7",
+      "title": "Add local integration check helpers for downstream projects",
+      "description": "Package reusable fixture-bound pytest helpers or Django test mixins for downstream projects to validate MFA integration behavior locally.",
+      "type": "enhancement",
+      "priority": "medium",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "7.1"
+      ],
+      "steps": [
+        "Provide a pytest helper or Django test mixin for fixture-bound MFA checks.",
+        "Keep helper APIs non-targetable, with no URL, host, credential, or payload-list parameters.",
+        "Add tests proving helpers run against synthetic users, synthetic devices, and in-process Django clients only.",
+        "Document helper usage and exact validation commands in the integration guide."
+      ],
+      "acceptance_criteria": [
+        "Downstream projects can reuse local MFA verification checks.",
+        "Helper APIs cannot be repointed at arbitrary targets.",
+        "Documentation shows exact test commands."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-15"
+    },
+    {
+      "id": "8.1",
+      "section": "8",
+      "title": "Design recovery code support",
+      "description": "Define recovery-code storage, verification, throttling, audit, and session-elevation expectations before implementation.",
+      "type": "security",
+      "priority": "medium",
+      "effort": "medium",
+      "status": "ready",
+      "dependencies": [],
+      "steps": [
+        "Define recovery-code generation, display, storage, and reset boundaries.",
+        "Specify hashing or encryption, constant-time comparison, one-time use, replay prevention, throttling, and audit expectations.",
+        "Document session elevation behavior after recovery-code verification.",
+        "Decide whether recovery codes are in post-MVP implementation scope and split follow-up tasks if accepted."
+      ],
+      "acceptance_criteria": [
+        "Design covers constant-time comparison, one-time use, replay prevention, throttling, and audit logging.",
+        "No raw recovery codes are stored.",
+        "Implementation tasks can be derived directly from the design."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-15"
+    },
+    {
+      "id": "9.1",
+      "section": "9",
+      "title": "Evaluate django-otp compatibility adapter",
+      "description": "Revisit the deferred django-otp compatibility decision now that the MVP service contracts and verification workflow are tested.",
+      "type": "enhancement",
+      "priority": "low",
+      "effort": "medium",
+      "status": "ready",
+      "dependencies": [],
+      "steps": [
+        "Compare current custom model guarantees against django-otp extension points.",
+        "Identify whether adapters can preserve encrypted storage, replay prevention, audit semantics, throttling, and HOTP resynchronization.",
+        "Document a recommendation: adapter, no adapter, or deferred.",
+        "If an adapter is recommended, split explicit implementation tasks and dependency-review tasks."
+      ],
+      "acceptance_criteria": [
+        "Decision note states whether django-otp compatibility is worth pursuing.",
+        "Security invariants that would be weakened or preserved are explicit.",
+        "No runtime dependency is added without a follow-up implementation task."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-15"
     }
   ]
 }
