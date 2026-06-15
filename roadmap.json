@@ -738,7 +738,7 @@
       "type": "security",
       "priority": "current",
       "effort": "medium",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "6.1"
       ],
@@ -757,7 +757,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-15"
+      "created_at": "2026-06-15",
+      "completed_at": "2026-06-15",
+      "completed_by": "codex:0b0e2249",
+      "completion_summary": "Added an MFAAuditEvent model and migration for HOTP verification and resynchronization audit metadata, persistence helpers for HOTPAuditRecord and HOTPResyncAuditRecord values, retention behavior through nullable SET_NULL relationships, and focused tests for field mapping, classification coverage, migration importability, and no OTP/secret/provisioning URI persistence.",
+      "branch": "feature/mfa-audit-event-models",
+      "commit": "221c9e3",
+      "tests_added": 15
     },
     {
       "id": "6.3",
@@ -767,7 +773,7 @@
       "type": "security",
       "priority": "medium",
       "effort": "medium",
-      "status": "backlog",
+      "status": "ready",
       "dependencies": [
         "6.2"
       ],

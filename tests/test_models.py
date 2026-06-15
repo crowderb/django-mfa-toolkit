@@ -2,9 +2,10 @@ import pytest
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, connection, transaction
 from django.db.migrations.loader import MigrationLoader
+from django.utils import timezone as django_timezone
 
 from django_mfa_toolkit.hotp import enroll_hotp
-from django_mfa_toolkit.models import HOTPDevice, TOTPDevice
+from django_mfa_toolkit.models import HOTPDevice, MFAAuditEvent, TOTPDevice
 from django_mfa_toolkit.secret_storage import decrypt_secret_text
 from django_mfa_toolkit.totp import enroll_totp
 
@@ -100,3 +101,32 @@ def test_device_model_migration_is_importable():
     created_models = {operation.name for operation in migration.operations if hasattr(operation, "name")}
 
     assert {"TOTPDevice", "HOTPDevice"}.issubset(created_models)
+
+
+@pytest.mark.django_db
+def test_audit_event_model_preserves_deleted_user_and_device_history(
+    synthetic_mfa_settings_override,
+    django_user_model,
+):
+    user = django_user_model.objects.create_user(username="audit-retention-user")
+    enrollment = enroll_hotp(account_name="hotp@example.test", issuer_name="Toolkit")
+    device = HOTPDevice.objects.create(user=user, persisted_secret=enrollment.persisted_secret)
+    event = MFAAuditEvent.objects.create(
+        user=user,
+        device=device,
+        event_type=MFAAuditEvent.EventType.VERIFICATION,
+        submitted_outcome=MFAAuditEvent.SubmittedOutcome.REJECTED,
+        result_classification="invalid",
+        server_counter=0,
+        next_counter=0,
+        replay_window=10,
+        attempted_at=django_timezone.now(),
+    )
+
+    user.delete()
+    device.delete()
+    event.refresh_from_db()
+
+    assert event.user is None
+    assert event.device is None
+    assert event.result_classification == "invalid"

@@ -64,3 +64,52 @@ class HOTPDevice(MFADeviceBase):
                 name="django_mfa_hotp_counter_non_negative",
             ),
         ]
+
+
+class MFAAuditEvent(models.Model):
+    class Factor(models.TextChoices):
+        HOTP = "hotp", "HOTP"
+
+    class EventType(models.TextChoices):
+        VERIFICATION = "verification", "Verification"
+        RESYNCHRONIZATION = "resynchronization", "Resynchronization"
+
+    class SubmittedOutcome(models.TextChoices):
+        ACCEPTED = "accepted", "Accepted"
+        REJECTED = "rejected", "Rejected"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="django_mfa_toolkit_audit_events",
+    )
+    device = models.ForeignKey(
+        HOTPDevice,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_events",
+    )
+    factor = models.CharField(max_length=16, choices=Factor.choices, default=Factor.HOTP)
+    event_type = models.CharField(max_length=32, choices=EventType.choices)
+    submitted_outcome = models.CharField(max_length=16, choices=SubmittedOutcome.choices)
+    result_classification = models.CharField(max_length=32)
+    server_counter = models.PositiveBigIntegerField()
+    matched_counter = models.PositiveBigIntegerField(null=True, blank=True)
+    next_counter = models.PositiveBigIntegerField()
+    look_ahead = models.PositiveIntegerField(null=True, blank=True)
+    search_window = models.PositiveIntegerField(null=True, blank=True)
+    replay_window = models.PositiveIntegerField()
+    submitted_count = models.PositiveIntegerField(null=True, blank=True)
+    attempted_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "attempted_at"]),
+            models.Index(fields=["device", "attempted_at"]),
+            models.Index(fields=["event_type", "result_classification"]),
+            models.Index(fields=["attempted_at"]),
+        ]
