@@ -12,7 +12,9 @@ from django_mfa_toolkit.hotp import (
     DEFAULT_HOTP_LOOK_AHEAD,
     DEFAULT_HOTP_REPLAY_WINDOW,
     DEFAULT_HOTP_RESYNC_SEARCH_WINDOW,
+    HOTPAuditRecord,
     HOTPEnrollment,
+    HOTPResyncAuditRecord,
     HOTPResyncResult,
     HOTPVerificationResult,
     enroll_hotp,
@@ -20,6 +22,15 @@ from django_mfa_toolkit.hotp import (
     verify_hotp,
 )
 from django_mfa_toolkit.models import HOTPDevice, TOTPDevice
+from django_mfa_toolkit.throttling import (
+    DEFAULT_MFA_THROTTLE_CACHE_ALIAS,
+    DEFAULT_MFA_THROTTLE_LIMIT,
+    DEFAULT_MFA_THROTTLE_PERIOD,
+    MFAThrottleConfig,
+    check_mfa_throttle,
+    record_mfa_throttle_failure,
+    reset_mfa_throttle,
+)
 from django_mfa_toolkit.totp import (
     DEFAULT_TOTP_DIGITS,
     DEFAULT_TOTP_INTERVAL,
@@ -109,11 +120,24 @@ def verify_totp_device(
     submitted_code: str,
     at_time: datetime | None = None,
     valid_window: int = DEFAULT_TOTP_VALID_WINDOW,
+    throttle_scope: str | None = None,
+    throttle_limit: int = DEFAULT_MFA_THROTTLE_LIMIT,
+    throttle_period: int = DEFAULT_MFA_THROTTLE_PERIOD,
+    throttle_cache_alias: str = DEFAULT_MFA_THROTTLE_CACHE_ALIAS,
 ) -> TOTPVerificationResult:
     with transaction.atomic():
         locked_device = TOTPDevice.objects.select_for_update().get(pk=device.pk)
         if not _device_can_verify(locked_device):
             return TOTPVerificationResult(accepted=False, failure_reason="invalid")
+
+        throttle_config = _throttle_config(
+            throttle_scope,
+            throttle_limit,
+            throttle_period,
+            throttle_cache_alias,
+        )
+        if throttle_config is not None and not check_mfa_throttle(throttle_config).allowed:
+            return TOTPVerificationResult(accepted=False, failure_reason="throttled")
 
         result = verify_totp(
             encrypted_secret=locked_device.persisted_secret,
@@ -127,6 +151,10 @@ def verify_totp_device(
         if result.accepted:
             locked_device.last_accepted_timecode = result.matched_timecode
             locked_device.save(update_fields=["last_accepted_timecode", "updated_at"])
+            if throttle_config is not None:
+                reset_mfa_throttle(throttle_config)
+        elif throttle_config is not None:
+            record_mfa_throttle_failure(throttle_config)
 
     return result
 
@@ -138,12 +166,25 @@ def verify_hotp_device(
     look_ahead: int = DEFAULT_HOTP_LOOK_AHEAD,
     replay_window: int = DEFAULT_HOTP_REPLAY_WINDOW,
     attempted_at: datetime | None = None,
+    throttle_scope: str | None = None,
+    throttle_limit: int = DEFAULT_MFA_THROTTLE_LIMIT,
+    throttle_period: int = DEFAULT_MFA_THROTTLE_PERIOD,
+    throttle_cache_alias: str = DEFAULT_MFA_THROTTLE_CACHE_ALIAS,
 ) -> HOTPVerificationResult:
     with transaction.atomic():
         locked_device = HOTPDevice.objects.select_for_update().get(pk=device.pk)
         timestamp = attempted_at or timezone.now()
         if not _device_can_verify(locked_device):
             return _inactive_hotp_result(locked_device, look_ahead, replay_window, timestamp)
+
+        throttle_config = _throttle_config(
+            throttle_scope,
+            throttle_limit,
+            throttle_period,
+            throttle_cache_alias,
+        )
+        if throttle_config is not None and not check_mfa_throttle(throttle_config).allowed:
+            return _throttled_hotp_result(locked_device, look_ahead, replay_window, timestamp)
 
         result = verify_hotp(
             encrypted_secret=locked_device.persisted_secret,
@@ -157,6 +198,10 @@ def verify_hotp_device(
         if result.accepted:
             locked_device.hotp_counter = result.next_counter
             locked_device.save(update_fields=["hotp_counter", "updated_at"])
+            if throttle_config is not None:
+                reset_mfa_throttle(throttle_config)
+        elif throttle_config is not None:
+            record_mfa_throttle_failure(throttle_config)
 
     return result
 
@@ -168,12 +213,31 @@ def resync_hotp_device(
     search_window: int = DEFAULT_HOTP_RESYNC_SEARCH_WINDOW,
     replay_window: int = DEFAULT_HOTP_REPLAY_WINDOW,
     attempted_at: datetime | None = None,
+    throttle_scope: str | None = None,
+    throttle_limit: int = DEFAULT_MFA_THROTTLE_LIMIT,
+    throttle_period: int = DEFAULT_MFA_THROTTLE_PERIOD,
+    throttle_cache_alias: str = DEFAULT_MFA_THROTTLE_CACHE_ALIAS,
 ) -> HOTPResyncResult:
     with transaction.atomic():
         locked_device = HOTPDevice.objects.select_for_update().get(pk=device.pk)
         timestamp = attempted_at or timezone.now()
         if not _device_can_verify(locked_device):
             return _inactive_hotp_resync_result(
+                locked_device,
+                submitted_codes,
+                search_window,
+                replay_window,
+                timestamp,
+            )
+
+        throttle_config = _throttle_config(
+            throttle_scope,
+            throttle_limit,
+            throttle_period,
+            throttle_cache_alias,
+        )
+        if throttle_config is not None and not check_mfa_throttle(throttle_config).allowed:
+            return _throttled_hotp_resync_result(
                 locked_device,
                 submitted_codes,
                 search_window,
@@ -193,12 +257,32 @@ def resync_hotp_device(
         if result.accepted:
             locked_device.hotp_counter = result.next_counter
             locked_device.save(update_fields=["hotp_counter", "updated_at"])
+            if throttle_config is not None:
+                reset_mfa_throttle(throttle_config)
+        elif throttle_config is not None:
+            record_mfa_throttle_failure(throttle_config)
 
     return result
 
 
 def _device_can_verify(device: TOTPDevice | HOTPDevice) -> bool:
     return device.is_active and device.confirmed_at is not None
+
+
+def _throttle_config(
+    throttle_scope: str | None,
+    throttle_limit: int,
+    throttle_period: int,
+    throttle_cache_alias: str,
+) -> MFAThrottleConfig | None:
+    if throttle_scope is None:
+        return None
+    return MFAThrottleConfig(
+        scope=throttle_scope,
+        limit=throttle_limit,
+        period=throttle_period,
+        cache_alias=throttle_cache_alias,
+    )
 
 
 def _inactive_hotp_result(
@@ -234,4 +318,55 @@ def _inactive_hotp_resync_result(
         replay_window=replay_window,
         digits=device.digits,
         attempted_at=attempted_at,
+    )
+
+
+def _throttled_hotp_result(
+    device: HOTPDevice,
+    look_ahead: int,
+    replay_window: int,
+    attempted_at: datetime,
+) -> HOTPVerificationResult:
+    audit_record = HOTPAuditRecord(
+        submitted_outcome="rejected",
+        result_classification="throttled",
+        server_counter=device.hotp_counter,
+        matched_counter=None,
+        next_counter=device.hotp_counter,
+        look_ahead=look_ahead,
+        replay_window=replay_window,
+        attempted_at=attempted_at,
+    )
+    return HOTPVerificationResult(
+        accepted=False,
+        next_counter=device.hotp_counter,
+        matched_counter=None,
+        audit_record=audit_record,
+    )
+
+
+def _throttled_hotp_resync_result(
+    device: HOTPDevice,
+    submitted_codes: Sequence[str],
+    search_window: int,
+    replay_window: int,
+    attempted_at: datetime,
+) -> HOTPResyncResult:
+    submitted_count = len(submitted_codes) if not isinstance(submitted_codes, (str, bytes)) else 1
+    audit_record = HOTPResyncAuditRecord(
+        submitted_outcome="rejected",
+        result_classification="throttled",
+        server_counter=device.hotp_counter,
+        matched_counter=None,
+        next_counter=device.hotp_counter,
+        submitted_count=submitted_count,
+        search_window=search_window,
+        replay_window=replay_window,
+        attempted_at=attempted_at,
+    )
+    return HOTPResyncResult(
+        accepted=False,
+        next_counter=device.hotp_counter,
+        matched_counter=None,
+        audit_record=audit_record,
     )

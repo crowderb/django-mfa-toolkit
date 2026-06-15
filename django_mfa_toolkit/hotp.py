@@ -24,12 +24,13 @@ DEFAULT_HOTP_RESYNC_SEARCH_WINDOW_MAX = 1000
 DEFAULT_HOTP_SECRET_LENGTH = 32
 DEFAULT_HOTP_SECRET_LENGTH_MAX = 320
 
-HOTPResultClassification = Literal["success", "counter_window_match", "invalid", "replay"]
+HOTPResultClassification = Literal["success", "counter_window_match", "invalid", "replay", "throttled"]
 HOTPResyncClassification = Literal[
     "resync_success",
     "invalid",
     "replay",
     "excessive_drift",
+    "throttled",
 ]
 HOTPSubmittedOutcome = Literal["accepted", "rejected"]
 

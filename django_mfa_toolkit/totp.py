@@ -20,7 +20,7 @@ DEFAULT_TOTP_VALID_WINDOW_MAX = 10
 DEFAULT_TOTP_SECRET_LENGTH = 32
 DEFAULT_TOTP_SECRET_LENGTH_MAX = 320
 
-TOTPFailureReason = Literal["invalid", "replay"]
+TOTPFailureReason = Literal["invalid", "replay", "throttled"]
 
 
 class TOTPError(Exception):
