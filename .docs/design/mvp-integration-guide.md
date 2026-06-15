@@ -128,6 +128,7 @@ def confirm_hotp_enrollment(request):
         look_ahead=10,
         replay_window=10,
         throttle_scope=f"user:{request.user.pk}:hotp-enroll:{device.pk}",
+        persist_audit=True,
     )
     if result.accepted:
         device.confirmed_at = timezone.now()
@@ -202,6 +203,7 @@ def resync_hotp_view(request):
         search_window=100,
         replay_window=10,
         throttle_scope=f"user:{request.user.pk}:hotp-resync:{device.pk}",
+        persist_audit=True,
     )
     audit = result.audit_record
     if result.accepted:
@@ -375,6 +377,8 @@ authentication protections.
 
 - Audit records: persist HOTP `audit_record` and resynchronization
   `audit_record` fields that classify the result, counter window, and timestamp.
+  Pass `persist_audit=True` to the HOTP device adapters when the package should
+  create local `MFAAuditEvent` rows in the same transaction as counter updates.
   Do not persist raw submitted OTP values.
 - Lockout handling: use stable throttle scopes per user, device, and flow, such
   as `user:{request.user.pk}:totp-verify:{device.pk}`. A successful verification
