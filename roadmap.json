@@ -841,7 +841,7 @@
       "type": "enhancement",
       "priority": "medium",
       "effort": "medium",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "7.1"
       ],
@@ -860,7 +860,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-15"
+      "created_at": "2026-06-15",
+      "completed_at": "2026-06-15",
+      "completed_by": "codex:7c2e9a41",
+      "completion_summary": "Added reusable fixture-bound local MFA integration helpers, downstream pytest mixin assertions for replay and session-boundary behavior, non-targetable surface coverage, focused tests, and integration-guide usage commands.",
+      "branch": "feature/local-integration-check-helpers",
+      "commit": "29ca961",
+      "tests_added": 3
     },
     {
       "id": "8.1",
