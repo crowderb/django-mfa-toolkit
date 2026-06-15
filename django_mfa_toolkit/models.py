@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db import models
@@ -113,3 +115,51 @@ class MFAAuditEvent(models.Model):
             models.Index(fields=["event_type", "result_classification"]),
             models.Index(fields=["attempted_at"]),
         ]
+
+
+class RecoveryCodeBatch(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="django_mfa_toolkit_recovery_code_batches",
+    )
+    batch_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    replaced_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "replaced_at"]),
+            models.Index(fields=["batch_id"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"Recovery code batch {self.batch_id} for user {self.user_id}"
+
+
+class RecoveryCode(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="django_mfa_toolkit_recovery_codes",
+    )
+    batch = models.ForeignKey(
+        RecoveryCodeBatch,
+        on_delete=models.CASCADE,
+        related_name="codes",
+    )
+    code_hash = models.CharField(max_length=255)
+    used_at = models.DateTimeField(null=True, blank=True)
+    replaced_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "used_at", "replaced_at"]),
+            models.Index(fields=["batch", "used_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"Recovery code {self.pk} for user {self.user_id}"
