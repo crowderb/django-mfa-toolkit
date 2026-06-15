@@ -936,7 +936,7 @@
       "type": "security",
       "priority": "medium",
       "effort": "medium",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "8.1"
       ],
@@ -955,7 +955,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-15"
+      "created_at": "2026-06-15",
+      "completed_at": "2026-06-15",
+      "completed_by": "codex:58b1c7e4",
+      "completion_summary": "Added package-owned recovery-code batch and code models, Django password-hash based generation/reset helpers, a schema migration, bounded generation validation, hashed persistence tests, reset state tests, migration importability checks, and non-targetable helper API coverage.",
+      "branch": "feature/recovery-code-storage-models",
+      "commit": "89ced64",
+      "tests_added": 11
     },
     {
       "id": "8.3",
@@ -965,7 +971,7 @@
       "type": "security",
       "priority": "medium",
       "effort": "medium",
-      "status": "backlog",
+      "status": "ready",
       "dependencies": [
         "8.2"
       ],
