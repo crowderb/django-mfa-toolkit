@@ -909,7 +909,7 @@
       "type": "enhancement",
       "priority": "low",
       "effort": "medium",
-      "status": "ready",
+      "status": "done",
       "dependencies": [],
       "steps": [
         "Compare current custom model guarantees against django-otp extension points.",
@@ -926,7 +926,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-15"
+      "created_at": "2026-06-15",
+      "completed_at": "2026-06-15",
+      "completed_by": "codex:6e4d91b8",
+      "completion_summary": "Documented a deferred django-otp compatibility decision, recommended no runtime dependency or built-in django-otp model adapter yet, identified preserved security invariants, and split follow-up tasks for optional dependency review, bridge design, and bridge implementation.",
+      "branch": "feature/django-otp-compatibility-evaluation",
+      "commit": "1d826ab",
+      "tests_added": 1
     },
     {
       "id": "8.2",
@@ -1032,6 +1038,93 @@
       "branch": "feature/recovery-code-integration-docs",
       "commit": "dde728f",
       "tests_added": 2
+    },
+    {
+      "id": "9.2",
+      "section": "9",
+      "title": "Review optional django-otp dependency support",
+      "description": "Evaluate django-otp version support, dependency constraints, middleware/session interactions, and migration impact before any optional compatibility bridge is implemented.",
+      "type": "security",
+      "priority": "low",
+      "effort": "medium",
+      "status": "ready",
+      "dependencies": [
+        "9.1"
+      ],
+      "steps": [
+        "Review django-otp release and support policy against this package's supported Django/Python versions.",
+        "Document required optional dependency constraints and extras naming without adding the runtime dependency yet.",
+        "Evaluate middleware, session, and migration interactions for downstream projects that already use django-otp.",
+        "Identify tests required before enabling any optional compatibility package surface."
+      ],
+      "acceptance_criteria": [
+        "No runtime dependency is added during review.",
+        "Supported django-otp versions and Django/Python constraints are explicit.",
+        "Middleware/session and migration risks are documented with required validation tests."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-15"
+    },
+    {
+      "id": "9.3",
+      "section": "9",
+      "title": "Design optional django-otp compatibility bridge",
+      "description": "Design a django-otp bridge that delegates verification to django-mfa-toolkit services while exposing compatible session/device semantics without copying raw secrets.",
+      "type": "enhancement",
+      "priority": "low",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "9.2"
+      ],
+      "steps": [
+        "Define whether the bridge uses a custom django-otp Device subclass, a session adapter, or both.",
+        "Map TOTP, HOTP, HOTP resynchronization, recovery-code, audit, throttling, and session-elevation controls to bridge behavior.",
+        "Document rejected approaches that duplicate encrypted seeds or raw recovery codes into django-otp built-in models.",
+        "Define local fixture-bound validation tests for bridge behavior."
+      ],
+      "acceptance_criteria": [
+        "The design preserves encrypted secret storage, recovery-code hashing, replay prevention, throttling, audit, and session-elevation controls.",
+        "The design does not use django-otp built-in TOTP/HOTP/static-token models as canonical storage for package-managed factors.",
+        "Implementation test requirements are explicit before any bridge code is added."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-15"
+    },
+    {
+      "id": "9.4",
+      "section": "9",
+      "title": "Implement optional django-otp compatibility bridge",
+      "description": "Implement the accepted optional django-otp bridge after dependency review and bridge design are complete.",
+      "type": "enhancement",
+      "priority": "low",
+      "effort": "large",
+      "status": "backlog",
+      "dependencies": [
+        "9.3"
+      ],
+      "steps": [
+        "Add optional dependency packaging only through an explicit extra if approved by dependency review.",
+        "Implement bridge code that delegates verification to django-mfa-toolkit services and preserves package persistence boundaries.",
+        "Add local fixture-bound tests for TOTP, HOTP, recovery-code, audit, throttling, and session behavior.",
+        "Document setup and validation commands for downstream projects using django-otp."
+      ],
+      "acceptance_criteria": [
+        "The bridge is optional and does not add django-otp as a required runtime dependency.",
+        "Tests prove raw secrets, raw recovery codes, submitted OTPs, and production credentials are not copied into django-otp storage or logs.",
+        "Bridge behavior preserves the control graph invariants named in the compatibility design."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-15"
     }
   ]
 }
