@@ -705,7 +705,7 @@
       "type": "security",
       "priority": "current",
       "effort": "small",
-      "status": "ready",
+      "status": "done",
       "dependencies": [],
       "steps": [
         "Define audit model fields for HOTP verification and HOTP resynchronization outcomes.",
@@ -722,7 +722,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-15"
+      "created_at": "2026-06-15",
+      "completed_at": "2026-06-15",
+      "completed_by": "codex:0fe7cd99",
+      "completion_summary": "Added an audit persistence contract for HOTP verification and resynchronization events, including model field shape, service-record mappings, classification coverage, retention/deletion guidance, transaction expectations, forbidden persisted data, and required implementation tests; added documentation coverage for the contract.",
+      "branch": "feature/audit-persistence-contracts",
+      "commit": "47d0f6a",
+      "tests_added": 1
     },
     {
       "id": "6.2",
@@ -732,7 +738,7 @@
       "type": "security",
       "priority": "current",
       "effort": "medium",
-      "status": "backlog",
+      "status": "ready",
       "dependencies": [
         "6.1"
       ],

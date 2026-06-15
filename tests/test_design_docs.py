@@ -50,3 +50,45 @@ def test_mvp_integration_guide_covers_end_to_end_django_path():
     missing_terms = sorted(term for term in required_terms if term not in content)
 
     assert not missing_terms
+
+
+def test_audit_persistence_contracts_cover_hotp_audit_boundary():
+    document = ROOT_DIR / ".docs" / "design" / "audit-persistence-contracts.md"
+    content = document.read_text(encoding="utf-8")
+
+    required_terms = {
+        "HOTPAuditRecord",
+        "HOTPResyncAuditRecord",
+        "event_type",
+        "submitted_outcome",
+        "result_classification",
+        "server_counter",
+        "matched_counter",
+        "next_counter",
+        "look_ahead",
+        "search_window",
+        "replay_window",
+        "submitted_count",
+        "attempted_at",
+        "success",
+        "counter_window_match",
+        "invalid",
+        "replay",
+        "throttled",
+        "resync_success",
+        "excessive_drift",
+        "submitted OTPs",
+        "raw MFA seeds",
+        "provisioning URIs",
+        "persisted_secret",
+        "transaction.atomic()",
+        "hotp.audit",
+        "hotp.counter-advance",
+        "hotp.replay-prevention",
+        "hotp.resync-bounded",
+        "secret-storage.encrypted-at-rest",
+    }
+
+    missing_terms = sorted(term for term in required_terms if term not in content)
+
+    assert not missing_terms
