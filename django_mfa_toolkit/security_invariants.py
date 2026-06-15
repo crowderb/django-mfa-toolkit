@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from inspect import signature
 
-from django_mfa_toolkit import hotp, totp
+from django_mfa_toolkit import device_adapters, hotp, session_elevation, totp
 
 
 FORBIDDEN_TARGET_PARAMETER_NAMES = frozenset(
@@ -109,6 +109,49 @@ MVP_CONTROL_REQUIREMENTS = (
             "tests/test_hotp.py::test_resync_hotp_rejects_excessive_drift_without_unbounded_search"
         ),
     ),
+    ControlRequirement(
+        id="django-persistence.stateful-verification",
+        factor="totp,hotp",
+        description="Model-backed device verification locks persisted state and advances only accepted MFA state.",
+        implemented_by=(
+            "django_mfa_toolkit.device_adapters.verify_totp_device",
+            "django_mfa_toolkit.device_adapters.verify_hotp_device",
+            "django_mfa_toolkit.device_adapters.resync_hotp_device",
+        ),
+        verification=(
+            "tests/test_device_adapters.py; "
+            "tests/test_django_integration_checks.py::test_local_totp_client_flow_enforces_mfa_replay_and_session_boundary; "
+            "tests/test_django_integration_checks.py::test_local_hotp_persisted_device_rejects_replay_without_counter_advance"
+        ),
+    ),
+    ControlRequirement(
+        id="django-throttling.lockout",
+        factor="totp,hotp",
+        description="Django device adapters enforce local throttle checks before OTP verification.",
+        implemented_by=(
+            "django_mfa_toolkit.throttling",
+            "django_mfa_toolkit.device_adapters.verify_totp_device(throttle_scope=...)",
+            "django_mfa_toolkit.device_adapters.verify_hotp_device(throttle_scope=...)",
+        ),
+        verification=(
+            "tests/test_throttling.py; "
+            "tests/test_django_integration_checks.py::test_local_totp_client_flow_enforces_throttle_before_session_elevation"
+        ),
+    ),
+    ControlRequirement(
+        id="django-session-elevation.boundary",
+        factor="totp,hotp",
+        description="Post-MFA session elevation is a separate timestamped Django session boundary.",
+        implemented_by=(
+            "django_mfa_toolkit.session_elevation.mark_mfa_elevated",
+            "django_mfa_toolkit.session_elevation.is_mfa_elevated",
+            "django_mfa_toolkit.session_elevation.mfa_required",
+        ),
+        verification=(
+            "tests/test_session_elevation.py; "
+            "tests/test_django_integration_checks.py::test_local_totp_client_flow_enforces_mfa_replay_and_session_boundary"
+        ),
+    ),
 )
 
 
@@ -134,6 +177,15 @@ def _surface_has_no_target_parameters() -> SecurityInvariantCheck:
         hotp.enroll_hotp,
         hotp.verify_hotp,
         hotp.resync_hotp,
+        device_adapters.enroll_totp_device,
+        device_adapters.verify_totp_device,
+        device_adapters.enroll_hotp_device,
+        device_adapters.verify_hotp_device,
+        device_adapters.resync_hotp_device,
+        session_elevation.mark_mfa_elevated,
+        session_elevation.is_mfa_elevated,
+        session_elevation.clear_mfa_elevation,
+        session_elevation.mfa_required,
         run_local_security_invariant_checks,
     )
     discovered = sorted(
@@ -167,6 +219,9 @@ def _control_requirements_are_represented() -> SecurityInvariantCheck:
         "hotp.replay-prevention",
         "hotp.audit",
         "hotp.resync-bounded",
+        "django-persistence.stateful-verification",
+        "django-throttling.lockout",
+        "django-session-elevation.boundary",
     }
     represented_ids = {requirement.id for requirement in MVP_CONTROL_REQUIREMENTS}
     missing = sorted(required_ids - represented_ids)
