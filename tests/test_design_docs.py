@@ -118,3 +118,35 @@ def test_control_graph_design_covers_agent_reasoning_model():
     missing_terms = sorted(term for term in required_terms if term not in content)
 
     assert not missing_terms
+
+
+def test_recovery_code_support_design_covers_required_security_controls():
+    document = ROOT_DIR / ".docs" / "design" / "recovery-code-support.md"
+    content = document.read_text(encoding="utf-8")
+
+    required_terms = {
+        "No raw recovery codes are stored",
+        "make_password()",
+        "check_password()",
+        "constant-time",
+        "one-time use",
+        "replay prevention",
+        "throttling",
+        "audit",
+        "transaction.atomic()",
+        "select_for_update()",
+        "factor=\"recovery-code\"",
+        "recovery-code.hashed-at-rest",
+        "recovery-code.constant-time",
+        "recovery-code.one-time-use",
+        "recovery-code.replay-prevention",
+        "recovery-code.throttling",
+        "recovery-code.audit",
+        "recovery-code.session-elevation",
+        "target URLs",
+        "credentials",
+    }
+
+    missing_terms = sorted(term for term in required_terms if term not in content)
+
+    assert not missing_terms

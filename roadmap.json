@@ -876,7 +876,7 @@
       "type": "security",
       "priority": "medium",
       "effort": "medium",
-      "status": "ready",
+      "status": "done",
       "dependencies": [],
       "steps": [
         "Define recovery-code generation, display, storage, and reset boundaries.",
@@ -893,7 +893,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-15"
+      "created_at": "2026-06-15",
+      "completed_at": "2026-06-15",
+      "completed_by": "codex:3a9b8d27",
+      "completion_summary": "Accepted recovery codes into post-MVP scope with a design covering generation/display boundaries, hashed storage, constant-time verification, one-time use, replay prevention, throttling, audit, session elevation, validation requirements, and follow-up implementation tasks.",
+      "branch": "feature/recovery-code-support-design",
+      "commit": "ebf55c6",
+      "tests_added": 1
     },
     {
       "id": "9.1",
@@ -915,6 +921,93 @@
         "Decision note states whether django-otp compatibility is worth pursuing.",
         "Security invariants that would be weakened or preserved are explicit.",
         "No runtime dependency is added without a follow-up implementation task."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-15"
+    },
+    {
+      "id": "8.2",
+      "section": "8",
+      "title": "Implement recovery-code storage models",
+      "description": "Add recovery-code generation, hashing, package-owned Django models, and migrations without storing raw recovery codes.",
+      "type": "security",
+      "priority": "medium",
+      "effort": "medium",
+      "status": "ready",
+      "dependencies": [
+        "8.1"
+      ],
+      "steps": [
+        "Create recovery-code generation helpers that return plaintext codes only for the current response.",
+        "Persist only hashed recovery-code records with user ownership, batch identifiers, used/replaced state, and timestamps.",
+        "Add migrations and model validation without embedding raw recovery codes or production-looking secrets.",
+        "Add focused tests for generation boundaries, hashed persistence, batch reset state, and migration importability."
+      ],
+      "acceptance_criteria": [
+        "No raw recovery codes are stored in models, migrations, fixtures, logs, or docs.",
+        "Recovery-code rows can represent unused, used, and replaced states.",
+        "Tests prove generated plaintext codes are returned only by creation/reset helpers."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-15"
+    },
+    {
+      "id": "8.3",
+      "section": "8",
+      "title": "Implement recovery-code verification adapters",
+      "description": "Add atomic recovery-code verification with throttling, one-time use, replay prevention, audit records, and optional audit persistence.",
+      "type": "security",
+      "priority": "medium",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "8.2"
+      ],
+      "steps": [
+        "Create recovery-code verification service and model-backed adapter APIs using constant-time hash verification.",
+        "Lock active unused recovery-code rows inside transaction.atomic() and consume exactly one accepted code.",
+        "Integrate throttling before code comparison and preserve replay/invalid/throttled outcomes without consuming codes.",
+        "Add recovery-code audit records and optional audit persistence without submitted code material."
+      ],
+      "acceptance_criteria": [
+        "Accepted recovery codes are marked used exactly once and cannot be replayed.",
+        "Invalid, replayed, replaced, and throttled submissions are rejected without consuming another code.",
+        "Audit records cover success, invalid, replay, throttled, and reset outcomes without raw recovery codes."
+      ],
+      "assigned_agent": null,
+      "assigned_at": null,
+      "lock_expires": null,
+      "archived": false,
+      "created_at": "2026-06-15"
+    },
+    {
+      "id": "8.4",
+      "section": "8",
+      "title": "Document and verify recovery-code integration path",
+      "description": "Extend integration docs, control graph, and local verification helpers for recovery-code flows after implementation.",
+      "type": "enhancement",
+      "priority": "medium",
+      "effort": "medium",
+      "status": "backlog",
+      "dependencies": [
+        "8.3"
+      ],
+      "steps": [
+        "Document recovery-code enrollment/reset, verification, throttling, audit, and session-elevation integration steps.",
+        "Extend the machine-readable control graph with recovery-code controls and implementation relationships.",
+        "Add local integration helper coverage for synthetic recovery-code users and in-process Django test-client flows.",
+        "Add validation commands to the integration guide and focused tests for non-targetable helper APIs."
+      ],
+      "acceptance_criteria": [
+        "Docs show exact recovery-code integration and validation commands.",
+        "The control graph represents recovery-code hashing, one-time use, replay prevention, throttling, audit, and session elevation.",
+        "Local verification helpers remain fixture-bound and accept no arbitrary targets, credentials, or payload lists."
       ],
       "assigned_agent": null,
       "assigned_at": null,
