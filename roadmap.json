@@ -596,7 +596,7 @@
       "completed_by": "codex:6f38b2a9",
       "completion_summary": "Added session elevation helpers for marking, checking, expiring, clearing, and requiring post-MFA state in Django sessions; documented integration expectations; and added test-client coverage for pre-MFA denial, post-MFA access, stale elevation, explicit reset, and logout cleanup.",
       "branch": "feature/mfa-session-elevation",
-      "commit": "uncommitted",
+      "commit": "d497cb4",
       "tests_added": 5
     },
     {
