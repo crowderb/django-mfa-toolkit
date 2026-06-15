@@ -561,7 +561,7 @@
       "completed_by": "codex:9b6e2f41",
       "completion_summary": "Added a Django-cache-backed MFA throttle API with hashed scope keys, integrated optional throttle checks into TOTP/HOTP model adapters before OTP verification, returned typed throttled outcomes, reset counters on success, and covered lockout/reset/no-OTP-leakage behavior with tests.",
       "branch": "feature/mfa-attempt-throttling",
-      "commit": "uncommitted",
+      "commit": "76c8933",
       "tests_added": 5
     },
     {
