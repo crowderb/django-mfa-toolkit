@@ -642,7 +642,7 @@
       "type": "enhancement",
       "priority": "medium",
       "effort": "small",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "5.6"
       ],
@@ -661,7 +661,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-14"
+      "created_at": "2026-06-14",
+      "completed_at": "2026-06-15",
+      "completed_by": "codex:f648dc0d",
+      "completion_summary": "Updated the MVP integration guide with model-backed TOTP/HOTP enrollment, confirmation, verification, HOTP resynchronization, throttling, session elevation, operational guidance, and exact validation commands for each integration layer; added documentation coverage for the end-to-end Django path.",
+      "branch": "feature/end-to-end-mfa-integration-guide",
+      "commit": "8f74128",
+      "tests_added": 1
     }
   ]
 }
