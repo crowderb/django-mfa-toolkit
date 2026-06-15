@@ -48,10 +48,12 @@ The application remains responsible for:
 
 - authenticating the user with Django's normal authentication stack before MFA;
 - showing provisioning URIs without logging them;
+- displaying generated recovery codes exactly once and never logging them;
 - confirming a newly enrolled device only after an initial successful MFA code;
 - choosing throttle scopes that identify the user, device, and flow;
 - calling `mark_mfa_elevated()` only after an accepted verification result;
-- persisting audit records without raw OTP submissions or raw secret material.
+- persisting audit records without raw OTP submissions, raw recovery codes, or
+  raw secret material.
 
 ### TOTP Enrollment
 
@@ -141,6 +143,34 @@ def confirm_hotp_enrollment(request):
 returned `audit_record` if the application has an audit sink, but do not store
 the submitted OTP.
 
+### Recovery-Code Enrollment and Reset
+
+```python
+from django_mfa_toolkit.recovery_codes import (
+    create_recovery_code_batch,
+    reset_recovery_code_batch,
+)
+
+
+def create_initial_recovery_codes(request):
+    enrolled = create_recovery_code_batch(user=request.user)
+    return enrolled.codes
+
+
+def replace_recovery_codes(request):
+    enrolled = reset_recovery_code_batch(
+        user=request.user,
+        persist_audit=True,
+    )
+    return enrolled.codes
+```
+
+Display `enrolled.codes` exactly once in the current response. The package
+persists only password hashes and batch state. Do not store the returned codes
+in the session, fixtures, audit rows, logs, analytics, support tickets, or email.
+Recovery-code reset should run only from an authenticated, recently MFA-elevated
+flow.
+
 ### Post-Enrollment Verification
 
 ```python
@@ -181,6 +211,42 @@ Use equivalent HOTP verification with `verify_hotp_device()` when the selected
 device is a hardware token. The post-MFA session marker is separate from the
 Django authenticated session and should expire independently.
 
+### Recovery-Code Verification
+
+```python
+from django.http import HttpResponse
+from django.shortcuts import redirect
+
+from django_mfa_toolkit.recovery_codes import verify_recovery_code
+from django_mfa_toolkit.session_elevation import mark_mfa_elevated
+
+
+def verify_recovery_code_view(request):
+    result = verify_recovery_code(
+        user=request.user,
+        submitted_code=request.POST["code"],
+        throttle_scope=f"user:{request.user.pk}:recovery-code",
+        persist_audit=True,
+    )
+    if result.accepted:
+        mark_mfa_elevated(
+            request,
+            factor="recovery-code",
+            device_id=result.matched_recovery_code_id,
+        )
+        return redirect("account")
+    if result.failure_reason == "throttled":
+        return HttpResponse("Too many recovery-code attempts.", status=429)
+    return HttpResponse("Recovery code rejected.", status=403)
+```
+
+`verify_recovery_code()` locks the user's active recovery-code rows, applies
+throttling before password-hash comparison, marks one accepted code used, and
+classifies used or replaced codes as `replay`. Keep recovery-code verification
+local and in-process. Do not build a remote recovery-code checker or support
+tool that accepts arbitrary targets, credentials, payload lists, or production
+submissions.
+
 ### Reusable Local Integration Checks
 
 Downstream projects can import fixture-bound helpers for their own pytest or
@@ -193,10 +259,17 @@ from django_mfa_toolkit.integration_checks import (
 )
 
 
-def test_mfa_device_replay_controls(synthetic_totp_device, synthetic_hotp_device):
+def test_mfa_device_replay_controls(
+    synthetic_totp_device,
+    synthetic_hotp_device,
+    synthetic_user,
+    synthetic_recovery_code_enrollment,
+):
     results = run_local_django_mfa_integration_checks(
         totp_device=synthetic_totp_device,
         hotp_device=synthetic_hotp_device,
+        recovery_code_user=synthetic_user,
+        recovery_code_enrollment=synthetic_recovery_code_enrollment,
     )
 
     assert all(result.passed for result in results)
@@ -221,6 +294,7 @@ Run the toolkit helper tests with:
 
 ```bash
 uv run pytest tests/test_integration_checks.py tests/test_security_invariants.py
+uv run pytest tests/test_recovery_codes.py
 ```
 
 Run the complete local verification suite with:
@@ -400,6 +474,11 @@ Treat `excessive_drift` as a signal that the device is too far out of sync for t
 - If HOTP verification returns `invalid` but you expected success, confirm that the caller passed the current `hotp_counter` back into the service.
 - If HOTP resynchronization returns `excessive_drift`, the submitted sequence is outside the configured search window or the wrong token is being used.
 - If audit logs are missing, persist `audit_record` from the service result at the application boundary.
+- If recovery-code verification returns `replay`, the submitted code was already
+  used or belongs to a replaced batch. Keep other recovery codes unchanged and
+  require a different active code.
+- If recovery-code verification returns `throttled`, the package rejected the
+  attempt before password-hash comparison and did not consume a code.
 
 ## Required Controls
 
@@ -427,7 +506,10 @@ authentication protections.
   `audit_record` fields that classify the result, counter window, and timestamp.
   Pass `persist_audit=True` to the HOTP device adapters when the package should
   create local `MFAAuditEvent` rows in the same transaction as counter updates.
-  Do not persist raw submitted OTP values.
+  Pass `persist_audit=True` to recovery-code reset and verification helpers when
+  the package should create local `MFAAuditEvent` rows for `success`, `invalid`,
+  `replay`, `throttled`, and `reset` outcomes. Do not persist raw submitted OTP
+  values or raw recovery codes.
 - Lockout handling: use stable throttle scopes per user, device, and flow, such
   as `user:{request.user.pk}:totp-verify:{device.pk}`. A successful verification
   resets the matching throttle scope.
@@ -453,6 +535,8 @@ uv run pytest tests/test_throttling.py
 uv run pytest tests/test_session_elevation.py
 uv run pytest tests/test_django_integration_checks.py
 uv run pytest tests/test_security_invariants.py
+uv run pytest tests/test_integration_checks.py
+uv run pytest tests/test_recovery_codes.py
 ```
 
 Validate the lower-level TOTP, HOTP, and encrypted-secret service boundary:

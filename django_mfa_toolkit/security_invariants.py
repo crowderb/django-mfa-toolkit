@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from inspect import signature
 from typing import Literal
 
-from django_mfa_toolkit import device_adapters, hotp, integration_checks, session_elevation, totp
+from django_mfa_toolkit import device_adapters, hotp, integration_checks, recovery_codes, session_elevation, totp
 
 
 FORBIDDEN_TARGET_PARAMETER_NAMES = frozenset(
@@ -179,6 +179,64 @@ MVP_CONTROL_REQUIREMENTS = (
             "tests/test_django_integration_checks.py::test_local_totp_client_flow_enforces_mfa_replay_and_session_boundary"
         ),
     ),
+    ControlRequirement(
+        id="recovery-code.hashed-at-rest",
+        factor="recovery-code",
+        description="Recovery codes are persisted only as Django password hashes.",
+        implemented_by=("django_mfa_toolkit.recovery_codes.create_recovery_code_batch",),
+        verification="tests/test_recovery_codes.py::test_create_recovery_code_batch_returns_plaintext_once_and_persists_only_hashes",
+    ),
+    ControlRequirement(
+        id="recovery-code.constant-time",
+        factor="recovery-code",
+        description="Recovery-code submissions are checked through Django's password hash verifier.",
+        implemented_by=("django_mfa_toolkit.recovery_codes.verify_recovery_code",),
+        verification="tests/test_recovery_codes.py::test_verify_recovery_code_accepts_once_and_rejects_replay",
+    ),
+    ControlRequirement(
+        id="recovery-code.one-time-use",
+        factor="recovery-code",
+        description="Accepted recovery codes are marked used exactly once.",
+        implemented_by=("django_mfa_toolkit.recovery_codes.verify_recovery_code",),
+        verification="tests/test_recovery_codes.py::test_verify_recovery_code_accepts_once_and_rejects_replay",
+    ),
+    ControlRequirement(
+        id="recovery-code.replay-prevention",
+        factor="recovery-code",
+        description="Used and replaced recovery codes are rejected as replay.",
+        implemented_by=("django_mfa_toolkit.recovery_codes.verify_recovery_code",),
+        verification=(
+            "tests/test_recovery_codes.py::test_verify_recovery_code_accepts_once_and_rejects_replay; "
+            "tests/test_recovery_codes.py::test_verify_recovery_code_rejects_replaced_code_without_consuming_active_code"
+        ),
+    ),
+    ControlRequirement(
+        id="recovery-code.throttling",
+        factor="recovery-code",
+        description="Recovery-code verification can enforce local throttling before hash comparison.",
+        implemented_by=("django_mfa_toolkit.recovery_codes.verify_recovery_code(throttle_scope=...)",),
+        verification="tests/test_recovery_codes.py::test_verify_recovery_code_throttles_before_code_comparison_without_consuming_code",
+    ),
+    ControlRequirement(
+        id="recovery-code.audit",
+        factor="recovery-code",
+        description="Recovery-code verification and reset outcomes can be audited without submitted code material.",
+        implemented_by=(
+            "django_mfa_toolkit.recovery_codes.RecoveryCodeAuditRecord",
+            "django_mfa_toolkit.models.MFAAuditEvent",
+        ),
+        verification=(
+            "tests/test_recovery_codes.py::test_verify_recovery_code_accepts_once_and_rejects_replay; "
+            "tests/test_recovery_codes.py::test_reset_recovery_code_batch_can_persist_reset_audit_without_code_material"
+        ),
+    ),
+    ControlRequirement(
+        id="recovery-code.session-elevation",
+        factor="recovery-code",
+        description="Accepted recovery-code verification marks a distinct post-MFA session factor.",
+        implemented_by=("django_mfa_toolkit.session_elevation.mark_mfa_elevated(factor='recovery-code')",),
+        verification="tests/test_integration_checks.py::test_recovery_code_in_process_client_flow_enforces_session_boundary",
+    ),
 )
 
 
@@ -275,6 +333,54 @@ MFA_CONTROL_GRAPH = ControlGraph(
             description="Post-MFA state is a timestamped session boundary separate from password authentication.",
         ),
         ControlGraphNode(
+            id="recovery-code.verification",
+            kind="control",
+            label="Recovery-code verification",
+            description="Recovery-code verification accepts only active unused codes and rejects spent or replaced codes.",
+        ),
+        ControlGraphNode(
+            id="recovery-code.hashed-at-rest",
+            kind="control",
+            label="Recovery-code hashed storage",
+            description="Recovery codes are persisted only as password hashes, never as displayable plaintext.",
+        ),
+        ControlGraphNode(
+            id="recovery-code.constant-time",
+            kind="control",
+            label="Recovery-code constant-time verification",
+            description="Recovery-code submissions are checked through Django's password hash verifier.",
+        ),
+        ControlGraphNode(
+            id="recovery-code.one-time-use",
+            kind="control",
+            label="Recovery-code one-time use",
+            description="Accepted recovery codes are consumed exactly once.",
+        ),
+        ControlGraphNode(
+            id="recovery-code.replay-prevention",
+            kind="control",
+            label="Recovery-code replay prevention",
+            description="Used or replaced recovery codes cannot be accepted again.",
+        ),
+        ControlGraphNode(
+            id="recovery-code.throttling",
+            kind="control",
+            label="Recovery-code throttling",
+            description="Recovery-code verification can enforce local throttling before hash comparison.",
+        ),
+        ControlGraphNode(
+            id="recovery-code.audit",
+            kind="control",
+            label="Recovery-code audit records",
+            description="Recovery-code verification and reset outcomes can be audited without submitted code material.",
+        ),
+        ControlGraphNode(
+            id="recovery-code.session-elevation",
+            kind="control",
+            label="Recovery-code session elevation",
+            description="Accepted recovery-code verification marks a distinct post-MFA session factor.",
+        ),
+        ControlGraphNode(
             id="verification-surface.not-targetable",
             kind="control",
             label="Non-targetable verification surface",
@@ -303,6 +409,12 @@ MFA_CONTROL_GRAPH = ControlGraph(
             kind="implementation",
             label="Session elevation helpers",
             description="django_mfa_toolkit.session_elevation",
+        ),
+        ControlGraphNode(
+            id="implementation.recovery-codes",
+            kind="implementation",
+            label="Recovery-code helpers",
+            description="django_mfa_toolkit.recovery_codes",
         ),
         ControlGraphNode(
             id="verification.local-tests",
@@ -427,6 +539,96 @@ MFA_CONTROL_GRAPH = ControlGraph(
             description="Session elevation is implemented by the session-elevation helpers.",
         ),
         ControlGraphRelationship(
+            source="recovery-code.verification",
+            target="recovery-code.hashed-at-rest",
+            kind="requires",
+            description="Recovery-code verification requires persisted codes to be stored as hashes.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.verification",
+            target="recovery-code.constant-time",
+            kind="requires",
+            description="Recovery-code verification requires password-hash verification for submitted values.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.verification",
+            target="recovery-code.one-time-use",
+            kind="requires",
+            description="Recovery-code verification requires accepted codes to be consumed once.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.verification",
+            target="recovery-code.replay-prevention",
+            kind="requires",
+            description="Recovery-code verification requires used and replaced codes to be rejected as replay.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.verification",
+            target="recovery-code.audit",
+            kind="requires",
+            description="Recovery-code verification requires auditable verification outcomes.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.verification",
+            target="recovery-code.session-elevation",
+            kind="requires",
+            description="Recovery-code verification can satisfy MFA only through a distinct session-elevation factor.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.verification",
+            target="recovery-code.throttling",
+            kind="satisfied-by-any",
+            description="Repeated recovery-code attempts require package throttling or a documented local lockout control.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.verification",
+            target="compensating-control.documented-lockout",
+            kind="satisfied-by-any",
+            description="Repeated recovery-code attempts may be controlled by a documented local lockout boundary.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.hashed-at-rest",
+            target="implementation.recovery-codes",
+            kind="implemented-by",
+            description="Recovery-code hashing and batch storage are implemented by the recovery-code helpers.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.constant-time",
+            target="implementation.recovery-codes",
+            kind="implemented-by",
+            description="Recovery-code verification is implemented by the recovery-code helpers.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.one-time-use",
+            target="implementation.recovery-codes",
+            kind="implemented-by",
+            description="Recovery-code consumption is implemented by the recovery-code helpers.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.replay-prevention",
+            target="implementation.recovery-codes",
+            kind="implemented-by",
+            description="Recovery-code replay rejection is implemented by the recovery-code helpers.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.throttling",
+            target="implementation.recovery-codes",
+            kind="implemented-by",
+            description="Recovery-code throttling is integrated by the recovery-code helpers.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.audit",
+            target="implementation.audit-model",
+            kind="implemented-by",
+            description="Recovery-code audit persistence is implemented by MFAAuditEvent.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.session-elevation",
+            target="implementation.session-elevation",
+            kind="implemented-by",
+            description="Recovery-code session elevation uses the existing session-elevation helpers.",
+        ),
+        ControlGraphRelationship(
             source="verification-surface.not-targetable",
             target="verification.local-tests",
             kind="verified-by",
@@ -443,6 +645,12 @@ MFA_CONTROL_GRAPH = ControlGraph(
             target="verification.local-tests",
             kind="verified-by",
             description="TOTP verification controls are verified by fixture-bound tests.",
+        ),
+        ControlGraphRelationship(
+            source="recovery-code.verification",
+            target="verification.local-tests",
+            kind="verified-by",
+            description="Recovery-code controls are verified by fixture-bound tests.",
         ),
     ),
 )
@@ -498,6 +706,12 @@ def _surface_has_no_target_parameters() -> SecurityInvariantCheck:
         integration_checks.MFALocalIntegrationCheckMixin.assert_totp_device_rejects_replay,
         integration_checks.MFALocalIntegrationCheckMixin.assert_hotp_device_rejects_replay_without_counter_advance,
         integration_checks.MFALocalIntegrationCheckMixin.assert_mfa_required_session_boundary,
+        integration_checks.MFALocalIntegrationCheckMixin.assert_recovery_code_rejects_replay,
+        integration_checks.MFALocalIntegrationCheckMixin.assert_recovery_code_session_boundary,
+        recovery_codes.create_recovery_code_batch,
+        recovery_codes.reset_recovery_code_batch,
+        recovery_codes.verify_recovery_code,
+        recovery_codes.normalize_recovery_code,
     )
     discovered = sorted(
         {
@@ -533,6 +747,13 @@ def _control_requirements_are_represented() -> SecurityInvariantCheck:
         "django-persistence.stateful-verification",
         "django-throttling.lockout",
         "django-session-elevation.boundary",
+        "recovery-code.hashed-at-rest",
+        "recovery-code.constant-time",
+        "recovery-code.one-time-use",
+        "recovery-code.replay-prevention",
+        "recovery-code.throttling",
+        "recovery-code.audit",
+        "recovery-code.session-elevation",
     }
     represented_ids = {requirement.id for requirement in MVP_CONTROL_REQUIREMENTS}
     missing = sorted(required_ids - represented_ids)

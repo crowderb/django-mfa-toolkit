@@ -11,6 +11,7 @@ from django.utils import timezone as django_timezone
 from django_mfa_toolkit.device_adapters import enroll_hotp_device, enroll_totp_device, verify_totp_device
 from django_mfa_toolkit.integration_checks import MFALocalIntegrationCheckMixin, run_local_django_mfa_integration_checks
 from django_mfa_toolkit.models import HOTPDevice, TOTPDevice
+from django_mfa_toolkit.recovery_codes import create_recovery_code_batch, verify_recovery_code
 from django_mfa_toolkit.secret_storage import decrypt_secret_text
 from django_mfa_toolkit.security_invariants import FORBIDDEN_TARGET_PARAMETER_NAMES
 from django_mfa_toolkit.session_elevation import mark_mfa_elevated, mfa_required
@@ -38,9 +39,25 @@ def verify_totp_view(request, device_id):
     return HttpResponse("rejected", status=403)
 
 
+def verify_recovery_code_view(request):
+    result = verify_recovery_code(
+        user=request.user,
+        submitted_code=request.POST.get("code", ""),
+        throttle_scope=f"local-integration:recovery-code:{request.user.pk}",
+        throttle_limit=1,
+    )
+    if result.accepted:
+        mark_mfa_elevated(request, factor="recovery-code", device_id=result.matched_recovery_code_id)
+        return HttpResponse(status=204)
+    if result.failure_reason == "throttled":
+        return HttpResponse("throttled", status=429)
+    return HttpResponse("rejected", status=403)
+
+
 urlpatterns = [
     path("protected/", protected_view),
     path("verify-totp/<int:device_id>/", verify_totp_view),
+    path("verify-recovery-code/", verify_recovery_code_view),
 ]
 
 
@@ -73,14 +90,23 @@ def synthetic_hotp_device(synthetic_mfa_settings_override, synthetic_user):
     return enrolled.device
 
 
+@pytest.fixture
+def synthetic_recovery_code_enrollment(synthetic_user):
+    return create_recovery_code_batch(user=synthetic_user, count=2)
+
+
 @pytest.mark.django_db
 def test_local_django_mfa_integration_checks_run_against_synthetic_devices(
     synthetic_totp_device,
     synthetic_hotp_device,
+    synthetic_user,
+    synthetic_recovery_code_enrollment,
 ):
     results = run_local_django_mfa_integration_checks(
         totp_device=synthetic_totp_device,
         hotp_device=synthetic_hotp_device,
+        recovery_code_user=synthetic_user,
+        recovery_code_enrollment=synthetic_recovery_code_enrollment,
         at_time=FIXED_TOTP_TIME,
     )
 
@@ -88,6 +114,7 @@ def test_local_django_mfa_integration_checks_run_against_synthetic_devices(
         "security-invariants.pass",
         "django-integration.totp-replay",
         "django-integration.hotp-replay-counter",
+        "django-integration.recovery-code-replay",
     }
     assert all(result.passed for result in results)
 
@@ -119,6 +146,33 @@ def test_local_integration_check_mixin_validates_in_process_client_session_bound
     )
 
 
+@pytest.mark.django_db
+def test_recovery_code_in_process_client_flow_enforces_session_boundary(
+    settings,
+    synthetic_user,
+    synthetic_recovery_code_enrollment,
+):
+    settings.ROOT_URLCONF = __name__
+    client = Client()
+    client.force_login(synthetic_user)
+    code = synthetic_recovery_code_enrollment.codes[0]
+
+    anonymous_response = client.get("/protected/")
+    verified_response = client.post("/verify-recovery-code/", {"code": code})
+    protected_response = client.get("/protected/")
+    client.session.flush()
+    client.force_login(synthetic_user)
+    client.post("/verify-recovery-code/", {"code": code})
+    replay_response = client.get("/protected/")
+
+    MFALocalIntegrationCheckMixin().assert_recovery_code_session_boundary(
+        anonymous_response=anonymous_response,
+        verified_response=verified_response,
+        protected_response=protected_response,
+        replay_response=replay_response,
+    )
+
+
 def test_local_integration_check_helpers_are_non_targetable():
     surfaces = (
         run_local_django_mfa_integration_checks,
@@ -126,6 +180,8 @@ def test_local_integration_check_helpers_are_non_targetable():
         MFALocalIntegrationCheckMixin.assert_totp_device_rejects_replay,
         MFALocalIntegrationCheckMixin.assert_hotp_device_rejects_replay_without_counter_advance,
         MFALocalIntegrationCheckMixin.assert_mfa_required_session_boundary,
+        MFALocalIntegrationCheckMixin.assert_recovery_code_rejects_replay,
+        MFALocalIntegrationCheckMixin.assert_recovery_code_session_boundary,
     )
 
     for surface in surfaces:

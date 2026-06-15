@@ -1006,7 +1006,7 @@
       "type": "enhancement",
       "priority": "medium",
       "effort": "medium",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "8.3"
       ],
@@ -1025,7 +1025,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-15"
+      "created_at": "2026-06-15",
+      "completed_at": "2026-06-15",
+      "completed_by": "codex:24c8f1a9",
+      "completion_summary": "Documented recovery-code enrollment/reset and verification integration, extended the control graph with recovery-code hashing, one-time use, replay prevention, throttling, audit, and session-elevation controls, added fixture-bound local helper coverage for recovery-code replay and session boundaries, and added exact validation commands.",
+      "branch": "feature/recovery-code-integration-docs",
+      "commit": "dde728f",
+      "tests_added": 2
     }
   ]
 }
