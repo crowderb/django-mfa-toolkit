@@ -607,7 +607,7 @@
       "type": "security",
       "priority": "medium",
       "effort": "medium",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "5.5"
       ],
@@ -626,7 +626,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-14"
+      "created_at": "2026-06-14",
+      "completed_at": "2026-06-15",
+      "completed_by": "codex:646dd36c",
+      "completion_summary": "Added local Django integration verification checks for persisted TOTP/HOTP devices, throttle lockout, replay rejection, HOTP resync lockout, and session elevation boundaries using synthetic users and Django test clients; extended the static security invariant registry and updated the integration guide to point to the new local checks.",
+      "branch": "feature/local-django-integration-checks",
+      "commit": "8201cf9",
+      "tests_added": 6
     },
     {
       "id": "5.7",
@@ -636,7 +642,7 @@
       "type": "enhancement",
       "priority": "medium",
       "effort": "small",
-      "status": "backlog",
+      "status": "ready",
       "dependencies": [
         "5.6"
       ],
