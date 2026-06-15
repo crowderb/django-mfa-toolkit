@@ -1,7 +1,7 @@
 {
   "$schema_version": "1.0",
   "project": "django-mfa-toolkit",
-  "last_updated": "2026-06-14",
+  "last_updated": "2026-06-15",
   "priorities": "",
   "notes": [],
   "references": [],
@@ -537,7 +537,7 @@
       "type": "security",
       "priority": "high",
       "effort": "medium",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "5.3"
       ],
@@ -556,7 +556,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-14"
+      "created_at": "2026-06-14",
+      "completed_at": "2026-06-15",
+      "completed_by": "codex:9b6e2f41",
+      "completion_summary": "Added a Django-cache-backed MFA throttle API with hashed scope keys, integrated optional throttle checks into TOTP/HOTP model adapters before OTP verification, returned typed throttled outcomes, reset counters on success, and covered lockout/reset/no-OTP-leakage behavior with tests.",
+      "branch": "feature/mfa-attempt-throttling",
+      "commit": "76c8933",
+      "tests_added": 5
     },
     {
       "id": "5.5",
@@ -566,7 +572,7 @@
       "type": "security",
       "priority": "high",
       "effort": "medium",
-      "status": "backlog",
+      "status": "ready",
       "dependencies": [
         "5.4"
       ],

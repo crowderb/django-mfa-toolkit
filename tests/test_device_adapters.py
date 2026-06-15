@@ -236,6 +236,169 @@ def test_unconfirmed_devices_reject_verification_without_state_changes(
     assert enrolled.device.last_accepted_timecode is None
 
 
+@pytest.mark.django_db
+def test_totp_device_throttle_blocks_before_otp_verification_and_resets_on_success(
+    synthetic_mfa_settings_override,
+    django_user_model,
+    monkeypatch,
+):
+    at_time = datetime(2026, 6, 14, 18, 0, tzinfo=timezone.utc)
+    user = django_user_model.objects.create_user(username="totp-throttle-user")
+    enrolled = enroll_totp_device(
+        user=user,
+        account_name="totp@example.test",
+        issuer_name="Toolkit",
+    )
+    TOTPDevice.objects.filter(pk=enrolled.device.pk).update(confirmed_at=django_timezone.now())
+    secret = decrypt_secret_text(enrolled.device.persisted_secret)
+    valid_code = pyotp.TOTP(secret).at(at_time)
+    throttle_scope = f"totp:{enrolled.device.pk}"
+
+    invalid = verify_totp_device(
+        device=enrolled.device,
+        submitted_code="000000",
+        at_time=at_time,
+        valid_window=0,
+        throttle_scope=throttle_scope,
+        throttle_limit=1,
+    )
+
+    from django_mfa_toolkit import device_adapters
+
+    def fail_if_called(**kwargs):
+        raise AssertionError("TOTP verification should not run after throttle lockout.")
+
+    monkeypatch.setattr(device_adapters, "verify_totp", fail_if_called)
+    throttled = verify_totp_device(
+        device=enrolled.device,
+        submitted_code=valid_code,
+        at_time=at_time,
+        valid_window=0,
+        throttle_scope=throttle_scope,
+        throttle_limit=1,
+    )
+
+    monkeypatch.undo()
+    accepted = verify_totp_device(
+        device=enrolled.device,
+        submitted_code=valid_code,
+        at_time=at_time,
+        valid_window=0,
+        throttle_scope="totp-reset-scope",
+        throttle_limit=2,
+    )
+    after_reset_invalid = verify_totp_device(
+        device=enrolled.device,
+        submitted_code="000000",
+        at_time=at_time,
+        valid_window=0,
+        throttle_scope="totp-reset-scope",
+        throttle_limit=2,
+    )
+
+    assert invalid.accepted is False
+    assert invalid.failure_reason == "invalid"
+    assert throttled.accepted is False
+    assert throttled.failure_reason == "throttled"
+    assert accepted.accepted is True
+    assert after_reset_invalid.failure_reason == "invalid"
+
+
+@pytest.mark.django_db
+def test_hotp_device_throttle_returns_typed_lockout_without_advancing_counter(
+    synthetic_mfa_settings_override,
+    django_user_model,
+    monkeypatch,
+):
+    user = django_user_model.objects.create_user(username="hotp-throttle-user")
+    enrolled = enroll_hotp_device(
+        user=user,
+        account_name="hotp@example.test",
+        issuer_name="Toolkit",
+    )
+    HOTPDevice.objects.filter(pk=enrolled.device.pk).update(confirmed_at=django_timezone.now())
+    secret = decrypt_secret_text(enrolled.device.persisted_secret)
+    valid_code = pyotp.HOTP(secret).at(0)
+    throttle_scope = f"hotp:{enrolled.device.pk}"
+
+    verify_hotp_device(
+        device=enrolled.device,
+        submitted_code="000000",
+        look_ahead=0,
+        throttle_scope=throttle_scope,
+        throttle_limit=1,
+    )
+
+    from django_mfa_toolkit import device_adapters
+
+    def fail_if_called(**kwargs):
+        raise AssertionError("HOTP verification should not run after throttle lockout.")
+
+    monkeypatch.setattr(device_adapters, "verify_hotp", fail_if_called)
+    throttled = verify_hotp_device(
+        device=enrolled.device,
+        submitted_code=valid_code,
+        look_ahead=0,
+        throttle_scope=throttle_scope,
+        throttle_limit=1,
+    )
+
+    enrolled.device.refresh_from_db()
+
+    assert throttled.accepted is False
+    assert throttled.audit_record.result_classification == "throttled"
+    assert throttled.next_counter == 0
+    assert enrolled.device.hotp_counter == 0
+
+
+@pytest.mark.django_db
+def test_hotp_resync_throttle_returns_typed_lockout_without_advancing_counter(
+    synthetic_mfa_settings_override,
+    django_user_model,
+    monkeypatch,
+):
+    user = django_user_model.objects.create_user(username="hotp-resync-throttle-user")
+    enrolled = enroll_hotp_device(
+        user=user,
+        account_name="hotp@example.test",
+        issuer_name="Toolkit",
+        initial_counter=3,
+    )
+    HOTPDevice.objects.filter(pk=enrolled.device.pk).update(confirmed_at=django_timezone.now())
+    secret = decrypt_secret_text(enrolled.device.persisted_secret)
+    hotp = pyotp.HOTP(secret)
+    throttle_scope = f"hotp-resync:{enrolled.device.pk}"
+
+    resync_hotp_device(
+        device=enrolled.device,
+        submitted_codes=[hotp.at(10), hotp.at(12)],
+        search_window=20,
+        throttle_scope=throttle_scope,
+        throttle_limit=1,
+    )
+
+    from django_mfa_toolkit import device_adapters
+
+    def fail_if_called(**kwargs):
+        raise AssertionError("HOTP resync should not run after throttle lockout.")
+
+    monkeypatch.setattr(device_adapters, "resync_hotp", fail_if_called)
+    throttled = resync_hotp_device(
+        device=enrolled.device,
+        submitted_codes=[hotp.at(10), hotp.at(11)],
+        search_window=20,
+        throttle_scope=throttle_scope,
+        throttle_limit=1,
+    )
+
+    enrolled.device.refresh_from_db()
+
+    assert throttled.accepted is False
+    assert throttled.audit_record.result_classification == "throttled"
+    assert throttled.next_counter == 3
+    assert enrolled.device.hotp_counter == 3
+
+
 def _record_select_for_update_calls(monkeypatch):
     calls = []
     original = QuerySet.select_for_update
