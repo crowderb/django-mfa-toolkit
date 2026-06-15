@@ -808,7 +808,7 @@
       "type": "enhancement",
       "priority": "medium",
       "effort": "medium",
-      "status": "ready",
+      "status": "done",
       "dependencies": [],
       "steps": [
         "Design graph nodes and edges for MFA safeguards and acceptable compensating controls.",
@@ -825,7 +825,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-15"
+      "created_at": "2026-06-15",
+      "completed_at": "2026-06-15",
+      "completed_by": "codex:6be7c006",
+      "completion_summary": "Added a machine-readable MFA control graph with control, implementation, verification, and compensating-control nodes; represented requires, implemented-by, verified-by, and satisfied-by-any relationships for secret storage, replay prevention, throttling or documented lockout, audit persistence, session elevation, and local verification; documented agent interpretation rules and preserved existing invariant APIs and tests.",
+      "branch": "feature/mfa-control-graph",
+      "commit": "3a343a3",
+      "tests_added": 4
     },
     {
       "id": "7.2",
@@ -835,7 +841,7 @@
       "type": "enhancement",
       "priority": "medium",
       "effort": "medium",
-      "status": "backlog",
+      "status": "ready",
       "dependencies": [
         "7.1"
       ],
