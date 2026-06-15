@@ -971,7 +971,7 @@
       "type": "security",
       "priority": "medium",
       "effort": "medium",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "8.2"
       ],
@@ -990,7 +990,13 @@
       "assigned_at": null,
       "lock_expires": null,
       "archived": false,
-      "created_at": "2026-06-15"
+      "created_at": "2026-06-15",
+      "completed_at": "2026-06-15",
+      "completed_by": "codex:91d4b6c2",
+      "completion_summary": "Added atomic recovery-code verification using Django password-hash checks, one-time consumption, replay and replaced-code rejection, throttling before comparison, recovery-code audit records, optional audit persistence for verification/reset outcomes, schema migration support, and focused tests.",
+      "branch": "feature/recovery-code-verification-adapters",
+      "commit": "15227e7",
+      "tests_added": 6
     },
     {
       "id": "8.4",
@@ -1000,7 +1006,7 @@
       "type": "enhancement",
       "priority": "medium",
       "effort": "medium",
-      "status": "backlog",
+      "status": "ready",
       "dependencies": [
         "8.3"
       ],
