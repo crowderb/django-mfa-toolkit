@@ -178,6 +178,41 @@ Treat `excessive_drift` as a signal that the device is too far out of sync for t
 - Treat pre-MFA to post-MFA session elevation as a separate boundary when you add login-flow integration.
 - Keep verification fixtures synthetic and in-process.
 
+## Session Elevation
+
+Use `django_mfa_toolkit.session_elevation` after a model-backed MFA verification
+result is accepted.
+
+```python
+from django_mfa_toolkit.session_elevation import mark_mfa_elevated, mfa_required
+
+
+def verify_mfa_view(request):
+    result = verify_totp_device(
+        device=device,
+        submitted_code=request.POST["code"],
+        throttle_scope=f"user:{request.user.pk}:device:{device.pk}",
+    )
+    if result.accepted:
+        mark_mfa_elevated(request, factor="totp", device_id=device.pk)
+
+
+@mfa_required(max_age=900)
+def protected_view(request):
+    ...
+```
+
+MFA elevation is stored in the existing Django session as a timestamped
+post-MFA marker. It is not a replacement for password authentication and should
+expire independently from the authenticated session. Clear the marker with
+`clear_mfa_elevation(request)` when a flow needs to return to pre-MFA state;
+Django logout also clears it because logout flushes the session.
+
+Do not disable Django authentication middleware, session middleware, CSRF
+protection, password handling, or secure cookie settings to use these helpers.
+The helpers assume the application is already using Django's normal session and
+authentication protections.
+
 ## Verification Commands
 
 Run the narrow test sets while integrating:
