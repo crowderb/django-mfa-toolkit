@@ -71,10 +71,12 @@ class HOTPDevice(MFADeviceBase):
 class MFAAuditEvent(models.Model):
     class Factor(models.TextChoices):
         HOTP = "hotp", "HOTP"
+        RECOVERY_CODE = "recovery_code", "Recovery code"
 
     class EventType(models.TextChoices):
         VERIFICATION = "verification", "Verification"
         RESYNCHRONIZATION = "resynchronization", "Resynchronization"
+        RESET = "reset", "Reset"
 
     class SubmittedOutcome(models.TextChoices):
         ACCEPTED = "accepted", "Accepted"
@@ -94,16 +96,30 @@ class MFAAuditEvent(models.Model):
         blank=True,
         related_name="audit_events",
     )
+    recovery_code_batch = models.ForeignKey(
+        "RecoveryCodeBatch",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_events",
+    )
+    recovery_code = models.ForeignKey(
+        "RecoveryCode",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_events",
+    )
     factor = models.CharField(max_length=16, choices=Factor.choices, default=Factor.HOTP)
     event_type = models.CharField(max_length=32, choices=EventType.choices)
     submitted_outcome = models.CharField(max_length=16, choices=SubmittedOutcome.choices)
     result_classification = models.CharField(max_length=32)
-    server_counter = models.PositiveBigIntegerField()
+    server_counter = models.PositiveBigIntegerField(null=True, blank=True)
     matched_counter = models.PositiveBigIntegerField(null=True, blank=True)
-    next_counter = models.PositiveBigIntegerField()
+    next_counter = models.PositiveBigIntegerField(null=True, blank=True)
     look_ahead = models.PositiveIntegerField(null=True, blank=True)
     search_window = models.PositiveIntegerField(null=True, blank=True)
-    replay_window = models.PositiveIntegerField()
+    replay_window = models.PositiveIntegerField(null=True, blank=True)
     submitted_count = models.PositiveIntegerField(null=True, blank=True)
     attempted_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -114,6 +130,7 @@ class MFAAuditEvent(models.Model):
             models.Index(fields=["device", "attempted_at"]),
             models.Index(fields=["event_type", "result_classification"]),
             models.Index(fields=["attempted_at"]),
+            models.Index(fields=["recovery_code_batch", "attempted_at"]),
         ]
 
 

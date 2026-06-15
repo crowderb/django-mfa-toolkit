@@ -6,12 +6,13 @@ from django.db import connection
 from django.db.migrations.loader import MigrationLoader
 from django.utils import timezone
 
-from django_mfa_toolkit.models import RecoveryCode, RecoveryCodeBatch
+from django_mfa_toolkit.models import MFAAuditEvent, RecoveryCode, RecoveryCodeBatch
 from django_mfa_toolkit.recovery_codes import (
     RecoveryCodeConfigurationError,
     create_recovery_code_batch,
     normalize_recovery_code,
     reset_recovery_code_batch,
+    verify_recovery_code,
 )
 from django_mfa_toolkit.security_invariants import FORBIDDEN_TARGET_PARAMETER_NAMES
 
@@ -68,6 +69,113 @@ def test_reset_recovery_code_batch_marks_previous_unused_codes_replaced(django_u
 
 
 @pytest.mark.django_db
+def test_verify_recovery_code_accepts_once_and_rejects_replay(django_user_model):
+    user = django_user_model.objects.create_user(username="recovery-verify-user")
+    enrolled = create_recovery_code_batch(user=user, count=2)
+    submitted_code = enrolled.codes[0]
+
+    accepted = verify_recovery_code(user=user, submitted_code=submitted_code, persist_audit=True)
+    replayed = verify_recovery_code(user=user, submitted_code=submitted_code, persist_audit=True)
+
+    consumed_code = RecoveryCode.objects.get(pk=accepted.matched_recovery_code_id)
+    audit_events = list(MFAAuditEvent.objects.filter(factor=MFAAuditEvent.Factor.RECOVERY_CODE).order_by("pk"))
+
+    assert accepted.accepted is True
+    assert accepted.failure_reason is None
+    assert accepted.audit_record.result_classification == "success"
+    assert consumed_code.used_at is not None
+    assert replayed.accepted is False
+    assert replayed.failure_reason == "replay"
+    assert replayed.audit_record.result_classification == "replay"
+    assert RecoveryCode.objects.filter(user=user, used_at__isnull=False).count() == 1
+    assert [event.result_classification for event in audit_events] == ["success", "replay"]
+    assert audit_events[0].recovery_code == consumed_code
+    assert audit_events[0].server_counter is None
+    assert audit_events[0].replay_window is None
+
+
+@pytest.mark.django_db
+def test_verify_recovery_code_rejects_replaced_code_without_consuming_active_code(django_user_model):
+    user = django_user_model.objects.create_user(username="recovery-replaced-user")
+    original = create_recovery_code_batch(user=user, count=1)
+    replaced_code = original.codes[0]
+    replacement = reset_recovery_code_batch(user=user, count=1)
+
+    result = verify_recovery_code(user=user, submitted_code=replaced_code, persist_audit=True)
+
+    assert result.accepted is False
+    assert result.failure_reason == "replay"
+    assert RecoveryCode.objects.filter(batch=replacement.batch, used_at__isnull=True, replaced_at__isnull=True).count() == 1
+    assert MFAAuditEvent.objects.get(result_classification="replay").recovery_code_batch == original.batch
+
+
+@pytest.mark.django_db
+def test_verify_recovery_code_rejects_invalid_code_without_consuming_codes(django_user_model):
+    user = django_user_model.objects.create_user(username="recovery-invalid-user")
+    create_recovery_code_batch(user=user, count=2)
+
+    result = verify_recovery_code(user=user, submitted_code="ZZZZ-ZZZZ", persist_audit=True)
+
+    event = MFAAuditEvent.objects.get(result_classification="invalid")
+
+    assert result.accepted is False
+    assert result.failure_reason == "invalid"
+    assert RecoveryCode.objects.filter(user=user, used_at__isnull=True, replaced_at__isnull=True).count() == 2
+    assert event.recovery_code is None
+    assert event.recovery_code_batch is None
+
+
+@pytest.mark.django_db
+def test_verify_recovery_code_throttles_before_code_comparison_without_consuming_code(django_user_model):
+    user = django_user_model.objects.create_user(username="recovery-throttle-user")
+    enrolled = create_recovery_code_batch(user=user, count=1)
+    throttle_scope = f"recovery-code:{user.pk}"
+
+    invalid = verify_recovery_code(
+        user=user,
+        submitted_code="ZZZZ-ZZZZ",
+        throttle_scope=throttle_scope,
+        throttle_limit=1,
+        persist_audit=True,
+    )
+    throttled = verify_recovery_code(
+        user=user,
+        submitted_code=enrolled.codes[0],
+        throttle_scope=throttle_scope,
+        throttle_limit=1,
+        persist_audit=True,
+    )
+
+    assert invalid.failure_reason == "invalid"
+    assert throttled.accepted is False
+    assert throttled.failure_reason == "throttled"
+    assert RecoveryCode.objects.filter(user=user, used_at__isnull=True, replaced_at__isnull=True).count() == 1
+    assert list(MFAAuditEvent.objects.order_by("pk").values_list("result_classification", flat=True)) == [
+        "invalid",
+        "throttled",
+    ]
+
+
+@pytest.mark.django_db
+def test_reset_recovery_code_batch_can_persist_reset_audit_without_code_material(django_user_model):
+    user = django_user_model.objects.create_user(username="recovery-reset-audit-user")
+    original = create_recovery_code_batch(user=user, count=1)
+
+    replacement = reset_recovery_code_batch(user=user, count=1, persist_audit=True)
+
+    event = MFAAuditEvent.objects.get(result_classification="reset")
+    stored_values = " ".join(str(value) for value in _recovery_audit_values(event))
+
+    assert replacement.audit_record is not None
+    assert replacement.audit_record.result_classification == "reset"
+    assert event.factor == MFAAuditEvent.Factor.RECOVERY_CODE
+    assert event.event_type == MFAAuditEvent.EventType.RESET
+    assert event.recovery_code_batch == replacement.batch
+    assert original.codes[0] not in stored_values
+    assert replacement.codes[0] not in stored_values
+
+
+@pytest.mark.django_db
 def test_recovery_code_rows_can_represent_unused_used_and_replaced_states(django_user_model):
     user = django_user_model.objects.create_user(username="recovery-state-user")
     enrolled = create_recovery_code_batch(user=user, count=3)
@@ -117,10 +225,20 @@ def test_recovery_code_model_migration_is_importable():
     assert {"RecoveryCodeBatch", "RecoveryCode"}.issubset(created_models)
 
 
+@pytest.mark.django_db
+def test_recovery_code_audit_migration_is_importable():
+    loader = MigrationLoader(connection)
+    migration = loader.get_migration("django_mfa_toolkit", "0004_mfaauditevent_recovery_code_and_more")
+    operation_names = {operation.__class__.__name__ for operation in migration.operations}
+
+    assert {"AddField", "AlterField", "AddIndex"}.issubset(operation_names)
+
+
 def test_recovery_code_storage_helpers_are_non_targetable():
     surfaces = (
         create_recovery_code_batch,
         reset_recovery_code_batch,
+        verify_recovery_code,
         normalize_recovery_code,
     )
 
@@ -128,3 +246,25 @@ def test_recovery_code_storage_helpers_are_non_targetable():
         parameter_names = {name.lower() for name in signature(surface).parameters}
 
         assert parameter_names.isdisjoint(FORBIDDEN_TARGET_PARAMETER_NAMES)
+
+
+def _recovery_audit_values(event):
+    return [
+        event.user_id,
+        event.device_id,
+        event.recovery_code_batch_id,
+        event.recovery_code_id,
+        event.factor,
+        event.event_type,
+        event.submitted_outcome,
+        event.result_classification,
+        event.server_counter,
+        event.matched_counter,
+        event.next_counter,
+        event.look_ahead,
+        event.search_window,
+        event.replay_window,
+        event.submitted_count,
+        event.attempted_at,
+        event.created_at,
+    ]
