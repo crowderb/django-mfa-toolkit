@@ -1,9 +1,12 @@
 {
   "$schema_version": "1.0",
   "project": "django-mfa-toolkit",
-  "last_updated": "2026-06-15",
+  "last_updated": "2026-07-19",
   "priorities": "",
-  "notes": [],
+  "status": "FROZEN — superseded by AgentEngine MCP items (project django-mfa-toolkit). As of 2026-07-19 the AgentEngine work items are the canonical roadmap and design docs live in AgentEngine (mirrored under .docs/design/). This file is retained as historical record only; do not add or update tasks here.",
+  "notes": [
+    "2026-07-19: Roadmap reconciled to AgentEngine MCP (Path A). Sections 1-8 map to MCP epics django-mfa-toolkit-1..8 (all done); section 9 (django-otp compatibility eval, task 9.1) maps to MCP epic django-mfa-toolkit-9 (ready). Open MCP-only work: django-mfa-toolkit-13 (pip-audit CVE scan in CI)."
+  ],
   "references": [],
   "sections": [
     {
