@@ -29,4 +29,6 @@ venv/
 env/
 
 # Local tooling
+.pip-cache/
+.uv-cache/
 .DS_Store
