@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Mirrors the Python versions advertised in pyproject.toml classifiers.
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.11.16"
+          enable-cache: true
+      - name: Verify lockfile is in sync
+        run: uv lock --check
+      - name: Sync dependencies (locked)
+        run: uv sync --locked --python ${{ matrix.python-version }}
+      - name: Run tests
+        run: uv run python -m pytest -q
+
+  audit:
+    name: dependency CVE audit (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.11.16"
+          enable-cache: true
+      - name: Sync dependencies (locked)
+        run: uv sync --locked
+      # Hard gate: this step fails the build when any locked dependency has a
+      # known CVE. The repo uses PEP 735 dependency-groups (not extras), so the
+      # dev group is synced by default -- `uv run python -m pip_audit` audits the
+      # full locked environment. See .docs/ci-cd.md for the remediation policy.
+      - name: Audit dependencies for known vulnerabilities
+        run: uv run python -m pip_audit
