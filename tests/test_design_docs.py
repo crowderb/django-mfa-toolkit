@@ -165,3 +165,26 @@ def test_recovery_code_support_design_covers_required_security_controls():
     missing_terms = sorted(term for term in required_terms if term not in content)
 
     assert not missing_terms
+
+
+def test_django_otp_compatibility_decision_covers_security_invariants_and_followups():
+    document = ROOT_DIR / ".docs" / "design" / "django-otp-compatibility.md"
+    content = document.read_text(encoding="utf-8")
+
+    required_terms = {
+        "Do not add a runtime `django-otp` dependency",
+        "optional bridge",
+        "dependency review",
+        "EncryptedSecret",
+        "secret-storage.encrypted-at-rest",
+        "hotp.resync-bounded",
+        "hotp.audit-persistence",
+        "recovery-code.hashed-at-rest",
+        "verification-surface.not-targetable",
+        "built-in `django-otp` `TOTPDevice`, `HOTPDevice`, or `StaticDevice`",
+        "No runtime dependency",
+    }
+
+    missing_terms = sorted(term for term in required_terms if term not in content)
+
+    assert not missing_terms
