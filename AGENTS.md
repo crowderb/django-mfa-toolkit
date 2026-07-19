@@ -11,6 +11,14 @@
 - Before committing or preparing commit-ready changes, review new and modified files for secrets. Never add real secrets to the repository.
 - Keep local environment files such as `.env` ignored. When configuration examples are needed, commit `.env.example` with pseudo values only.
 - Pushes to the git server must be made from a new feature branch. Never push directly to `main`.
+- Before opening or updating a PR, run `./scripts/ci-local.sh` from the repository root and treat any failure as blocking until resolved or explicitly documented.
+
+## Local CI Quality Gate
+
+- `./scripts/ci-local.sh` is the deterministic local entry point and is the **local mirror of the hosted GitHub Actions CI** (`.github/workflows/ci.yml`). It runs the same blocking checks — `uv lock --check`, `uv sync --locked`, package build, the full pytest suite, and the locked `pip-audit` dependency audit — so failures are caught before push rather than in CI.
+- The `pip-audit` step is a hard gate in both the local script and hosted CI (see `.docs/ci-cd.md` for the audit policy and remediation).
+- No formatting, lint, or type-check tooling is configured in `pyproject.toml` yet; the local gate documents those as not configured instead of substituting unreviewed tools. If such tooling is added, add it to both `scripts/ci-local.sh` and the hosted workflow so the two stay in sync.
+- The dependency audit uses PyPI advisory data through `pip-audit`. A missing network path or unavailable advisory service is a blocking local-service failure, not a skipped check; restore connectivity or rerun with access before PR work proceeds.
 
 ## Security Development Rules
 
