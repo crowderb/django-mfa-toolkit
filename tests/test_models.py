@@ -98,7 +98,9 @@ def test_hotp_device_rejects_negative_counter(
 def test_device_model_migration_is_importable():
     loader = MigrationLoader(connection)
     migration = loader.get_migration("django_mfa_toolkit", "0001_initial")
-    created_models = {operation.name for operation in migration.operations if hasattr(operation, "name")}
+    created_models = {
+        operation.name for operation in migration.operations if hasattr(operation, "name")
+    }
 
     assert {"TOTPDevice", "HOTPDevice"}.issubset(created_models)
 

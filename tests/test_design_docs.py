@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT_DIR = Path(__file__).resolve().parents[1]
 
 
@@ -44,7 +43,7 @@ def test_mvp_integration_guide_covers_end_to_end_django_path():
         "create_recovery_code_batch",
         "reset_recovery_code_batch",
         "verify_recovery_code",
-        "factor=\"recovery-code\"",
+        'factor="recovery-code"',
         "DJANGO_MFA_TOOLKIT_SECRET_ENCRYPTION_KEYS",
         "uv run pytest tests/test_device_adapters.py",
         "uv run pytest tests/test_django_integration_checks.py",
@@ -150,7 +149,7 @@ def test_recovery_code_support_design_covers_required_security_controls():
         "audit",
         "transaction.atomic()",
         "select_for_update()",
-        "factor=\"recovery-code\"",
+        'factor="recovery-code"',
         "recovery-code.hashed-at-rest",
         "recovery-code.constant-time",
         "recovery-code.one-time-use",

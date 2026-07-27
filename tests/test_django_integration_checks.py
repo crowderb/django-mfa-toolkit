@@ -25,7 +25,6 @@ from django_mfa_toolkit.security_invariants import (
 )
 from django_mfa_toolkit.session_elevation import mark_mfa_elevated, mfa_required
 
-
 FIXED_TOTP_TIME = datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc)
 
 
@@ -130,7 +129,9 @@ def test_local_totp_client_flow_enforces_throttle_before_session_elevation(
     valid_code = _totp_code(synthetic_totp_device)
 
     rejected_response = client.post(f"/verify-totp/{synthetic_totp_device.pk}/", {"code": "000000"})
-    throttled_response = client.post(f"/verify-totp/{synthetic_totp_device.pk}/", {"code": valid_code})
+    throttled_response = client.post(
+        f"/verify-totp/{synthetic_totp_device.pk}/", {"code": valid_code}
+    )
     protected_response = client.get("/protected/")
 
     synthetic_totp_device.refresh_from_db()

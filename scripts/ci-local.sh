@@ -18,19 +18,14 @@ run_step() {
   "$@"
 }
 
-note_unconfigured() {
-  printf '\n==> %s\n' "$1"
-  printf 'No %s configuration is present in pyproject.toml or repository tooling; no blocking %s check is defined.\n' "$2" "$2"
-}
-
 printf 'Running local CI quality gate from %s\n' "${repo_root}"
 
 run_step uv lock --check
 run_step uv sync --locked
 
-note_unconfigured "format" "formatting"
-note_unconfigured "lint" "lint"
-note_unconfigured "type" "type"
+run_step uv run ruff format --check django_mfa_toolkit tests
+run_step uv run ruff check django_mfa_toolkit tests
+run_step uv run mypy
 
 build_dir="$(mktemp -d "${TMPDIR:-/tmp}/django-mfa-toolkit-build.XXXXXX")"
 trap 'rm -rf "${build_dir}"' EXIT
