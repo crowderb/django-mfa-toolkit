@@ -1,3 +1,5 @@
+> **Documentation provenance:** This document is a derivative copy maintained for offline access only. The authoritative source is the AgentEngine MCP design doc: `django-mfa-toolkit:totp-services`. Always defer to the MCP document; local copies may be stale.
+
 # TOTP Enrollment and Verification
 
 Status: accepted MVP primitive

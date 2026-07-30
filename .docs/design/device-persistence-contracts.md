@@ -1,3 +1,5 @@
+> **Documentation provenance:** This document is a derivative copy maintained for offline access only. The authoritative source is the AgentEngine MCP design doc: `django-mfa-toolkit:device-persistence-contracts`. Always defer to the MCP document; local copies may be stale.
+
 # Django MFA Device Persistence Contracts
 
 Status: accepted design gate

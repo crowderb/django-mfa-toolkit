@@ -1,3 +1,5 @@
+> **Documentation provenance:** This document is a derivative copy maintained for offline access only. The authoritative source is the AgentEngine MCP design doc: `django-mfa-toolkit:security-invariant-checks`. Always defer to the MCP document; local copies may be stale.
+
 # Local Security Invariant Checks
 
 Status: accepted MVP verification primitive

@@ -1,3 +1,5 @@
+> **Documentation provenance:** This document is a derivative copy maintained for offline access only. The authoritative source is the AgentEngine MCP design doc: `django-mfa-toolkit:mvp-integration-guide`. Always defer to the MCP document; local copies may be stale.
+
 # MVP Integration Guide
 
 Status: agent-followable MVP guide
