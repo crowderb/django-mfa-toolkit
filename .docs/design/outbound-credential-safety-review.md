@@ -1,3 +1,5 @@
+> **Documentation provenance:** This document is a derivative copy maintained for offline access only. The authoritative source is the AgentEngine MCP design doc: `django-mfa-toolkit:outbound-credential-safety-review`. Always defer to the MCP document; local copies may be stale.
+
 # Outbound Credential Safety Review
 
 Status: triage complete — no outbound-authenticating call path

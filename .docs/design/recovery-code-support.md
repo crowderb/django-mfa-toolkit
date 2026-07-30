@@ -1,3 +1,5 @@
+> **Documentation provenance:** This document is a derivative copy maintained for offline access only. The authoritative source is the AgentEngine MCP design doc: `django-mfa-toolkit:recovery-code-support`. Always defer to the MCP document; local copies may be stale.
+
 # Recovery Code Support
 
 Status: accepted design gate

@@ -1,3 +1,5 @@
+> **Documentation provenance:** This document is a derivative copy maintained for offline access only. The authoritative source is the AgentEngine MCP design doc: `django-mfa-toolkit:mvp-architecture`. Always defer to the MCP document; local copies may be stale.
+
 # MVP Architecture and Dependency Strategy
 
 Status: accepted foundation decision

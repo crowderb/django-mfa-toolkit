@@ -1,3 +1,5 @@
+> **Documentation provenance:** This document is a derivative copy maintained for offline access only. The authoritative source is the AgentEngine MCP design doc: `django-mfa-toolkit:secret-storage`. Always defer to the MCP document; local copies may be stale.
+
 # MFA Secret Storage
 
 Status: accepted MVP primitive

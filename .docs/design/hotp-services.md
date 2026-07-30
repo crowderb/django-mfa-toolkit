@@ -1,3 +1,5 @@
+> **Documentation provenance:** This document is a derivative copy maintained for offline access only. The authoritative source is the AgentEngine MCP design doc: `django-mfa-toolkit:hotp-services`. Always defer to the MCP document; local copies may be stale.
+
 # HOTP Enrollment, Verification, and Audit
 
 Status: accepted MVP primitive
