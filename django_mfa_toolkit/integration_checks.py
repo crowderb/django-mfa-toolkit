@@ -40,7 +40,9 @@ class MFALocalIntegrationCheckMixin:
         valid_window: int = 0,
     ) -> None:
         timestamp = at_time or timezone.now()
-        submitted_code = pyotp.TOTP(decrypt_secret_text(device.persisted_secret), digits=device.digits).at(timestamp)
+        submitted_code = pyotp.TOTP(
+            decrypt_secret_text(device.persisted_secret), digits=device.digits
+        ).at(timestamp)
 
         accepted = verify_totp_device(
             device=device,
@@ -56,9 +58,13 @@ class MFALocalIntegrationCheckMixin:
         )
 
         if not accepted.accepted:
-            raise AssertionError(f"Expected synthetic TOTP device check to accept the first code: {accepted}")
+            raise AssertionError(
+                f"Expected synthetic TOTP device check to accept the first code: {accepted}"
+            )
         if replayed.accepted or replayed.failure_reason != "replay":
-            raise AssertionError(f"Expected synthetic TOTP device check to reject replay: {replayed}")
+            raise AssertionError(
+                f"Expected synthetic TOTP device check to reject replay: {replayed}"
+            )
 
     def assert_hotp_device_rejects_replay_without_counter_advance(
         self,
@@ -68,7 +74,9 @@ class MFALocalIntegrationCheckMixin:
         replay_window: int = 1,
     ) -> None:
         starting_counter = device.hotp_counter
-        submitted_code = pyotp.HOTP(decrypt_secret_text(device.persisted_secret), digits=device.digits).at(starting_counter)
+        submitted_code = pyotp.HOTP(
+            decrypt_secret_text(device.persisted_secret), digits=device.digits
+        ).at(starting_counter)
 
         accepted = verify_hotp_device(
             device=device,
@@ -86,9 +94,13 @@ class MFALocalIntegrationCheckMixin:
         device.refresh_from_db()
 
         if not accepted.accepted or accepted.next_counter != starting_counter + 1:
-            raise AssertionError(f"Expected synthetic HOTP device check to accept and advance once: {accepted}")
+            raise AssertionError(
+                f"Expected synthetic HOTP device check to accept and advance once: {accepted}"
+            )
         if replayed.accepted or replayed.audit_record.result_classification != "replay":
-            raise AssertionError(f"Expected synthetic HOTP device check to reject replay: {replayed}")
+            raise AssertionError(
+                f"Expected synthetic HOTP device check to reject replay: {replayed}"
+            )
         if device.hotp_counter != starting_counter + 1:
             raise AssertionError(
                 "Expected synthetic HOTP device check to leave the persisted counter unchanged after replay."
@@ -106,13 +118,21 @@ class MFALocalIntegrationCheckMixin:
         protected_status: int = 200,
     ) -> None:
         if anonymous_response.status_code != forbidden_status:
-            raise AssertionError("Expected protected view to reject the pre-MFA in-process client request.")
+            raise AssertionError(
+                "Expected protected view to reject the pre-MFA in-process client request."
+            )
         if verified_response.status_code != verified_status:
-            raise AssertionError("Expected local MFA verification response to mark the session elevated.")
+            raise AssertionError(
+                "Expected local MFA verification response to mark the session elevated."
+            )
         if protected_response.status_code != protected_status:
-            raise AssertionError("Expected protected view to accept the MFA-elevated in-process client request.")
+            raise AssertionError(
+                "Expected protected view to accept the MFA-elevated in-process client request."
+            )
         if replay_response.status_code != forbidden_status:
-            raise AssertionError("Expected protected view to reject the replayed or non-elevated client request.")
+            raise AssertionError(
+                "Expected protected view to reject the replayed or non-elevated client request."
+            )
 
     def assert_recovery_code_rejects_replay(
         self,
@@ -126,9 +146,13 @@ class MFALocalIntegrationCheckMixin:
         replayed = verify_recovery_code(user=user, submitted_code=submitted_code)
 
         if not accepted.accepted:
-            raise AssertionError(f"Expected synthetic recovery-code check to accept the first code: {accepted}")
+            raise AssertionError(
+                f"Expected synthetic recovery-code check to accept the first code: {accepted}"
+            )
         if replayed.accepted or replayed.failure_reason != "replay":
-            raise AssertionError(f"Expected synthetic recovery-code check to reject replay: {replayed}")
+            raise AssertionError(
+                f"Expected synthetic recovery-code check to reject replay: {replayed}"
+            )
 
     def assert_recovery_code_session_boundary(
         self,
@@ -163,7 +187,9 @@ def run_local_django_mfa_integration_checks(
     """Run local integration checks against caller-provided synthetic devices."""
 
     mixin = MFALocalIntegrationCheckMixin()
-    results = [_check_result("security-invariants.pass", mixin.assert_local_security_invariants_pass)]
+    results = [
+        _check_result("security-invariants.pass", mixin.assert_local_security_invariants_pass)
+    ]
     if totp_device is not None:
         results.append(
             _check_result(
@@ -175,7 +201,9 @@ def run_local_django_mfa_integration_checks(
         results.append(
             _check_result(
                 "django-integration.hotp-replay-counter",
-                lambda: mixin.assert_hotp_device_rejects_replay_without_counter_advance(hotp_device),
+                lambda: mixin.assert_hotp_device_rejects_replay_without_counter_advance(
+                    hotp_device
+                ),
             )
         )
     if recovery_code_user is not None and recovery_code_enrollment is not None:
@@ -196,4 +224,6 @@ def _check_result(check_id: str, assertion) -> LocalIntegrationCheckResult:
         assertion()
     except AssertionError as exc:
         return LocalIntegrationCheckResult(id=check_id, passed=False, detail=str(exc))
-    return LocalIntegrationCheckResult(id=check_id, passed=True, detail="Local fixture-bound check passed.")
+    return LocalIntegrationCheckResult(
+        id=check_id, passed=True, detail="Local fixture-bound check passed."
+    )

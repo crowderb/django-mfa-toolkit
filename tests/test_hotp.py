@@ -192,7 +192,9 @@ def test_enroll_hotp_validates_labels_and_counter():
         with pytest.raises(HOTPConfigurationError):
             enroll_hotp(account_name="", issuer_name="Toolkit")
         with pytest.raises(HOTPConfigurationError):
-            enroll_hotp(account_name="token@example.test", issuer_name="Toolkit", initial_counter=-1)
+            enroll_hotp(
+                account_name="token@example.test", issuer_name="Toolkit", initial_counter=-1
+            )
 
 
 def test_enroll_hotp_validates_secret_length():

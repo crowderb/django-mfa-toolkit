@@ -12,7 +12,6 @@ from pyotp import utils as pyotp_utils
 
 from django_mfa_toolkit.secret_storage import EncryptedSecret, decrypt_secret_text, encrypt_secret
 
-
 DEFAULT_TOTP_DIGITS = 6
 DEFAULT_TOTP_INTERVAL = 30
 DEFAULT_TOTP_VALID_WINDOW = 1
@@ -77,7 +76,9 @@ def enroll_totp(
         )
 
     secret = pyotp.random_base32(length=secret_length)
-    totp = pyotp.TOTP(secret, digits=digits, interval=interval, name=account_name, issuer=issuer_name)
+    totp = pyotp.TOTP(
+        secret, digits=digits, interval=interval, name=account_name, issuer=issuer_name
+    )
 
     return TOTPEnrollment(
         encrypted_secret=encrypt_secret(secret),

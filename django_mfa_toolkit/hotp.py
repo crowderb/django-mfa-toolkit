@@ -13,7 +13,6 @@ from pyotp import utils as pyotp_utils
 
 from django_mfa_toolkit.secret_storage import EncryptedSecret, decrypt_secret_text, encrypt_secret
 
-
 DEFAULT_HOTP_DIGITS = 6
 DEFAULT_HOTP_LOOK_AHEAD = 10
 DEFAULT_HOTP_LOOK_AHEAD_MAX = 100
@@ -24,7 +23,9 @@ DEFAULT_HOTP_RESYNC_SEARCH_WINDOW_MAX = 1000
 DEFAULT_HOTP_SECRET_LENGTH = 32
 DEFAULT_HOTP_SECRET_LENGTH_MAX = 320
 
-HOTPResultClassification = Literal["success", "counter_window_match", "invalid", "replay", "throttled"]
+HOTPResultClassification = Literal[
+    "success", "counter_window_match", "invalid", "replay", "throttled"
+]
 HOTPResyncClassification = Literal[
     "resync_success",
     "invalid",

@@ -25,10 +25,13 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+  "django-stubs[compatible-mypy]>=5.2",
   "django>=4.2,<6.0",
+  "mypy>=1.13",
   "pytest>=8.0",
   "pytest-django>=4.8",
   "pip-audit>=2.7",
+  "ruff>=0.9",
 ]
 
 [build-system]
@@ -46,3 +49,28 @@ addopts = [
   "--strict-config",
   "--strict-markers",
 ]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["django_mfa_toolkit/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+plugins = ["mypy_django_plugin.main"]
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+files = ["django_mfa_toolkit"]
+exclude = ["django_mfa_toolkit/migrations/"]
+
+[[tool.mypy.overrides]]
+module = ["django_mfa_toolkit.migrations.*"]
+ignore_errors = true
+
+[tool.django-stubs]
+django_settings_module = "tests.settings"

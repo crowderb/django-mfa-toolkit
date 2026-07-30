@@ -65,15 +65,22 @@ def enroll_totp_device(
     interval: int = DEFAULT_TOTP_INTERVAL,
     secret_length: int | None = None,
 ) -> TOTPDeviceEnrollment:
-    enrollment_kwargs = {
-        "account_name": account_name,
-        "issuer_name": issuer_name,
-        "digits": digits,
-        "interval": interval,
-    }
-    if secret_length is not None:
-        enrollment_kwargs["secret_length"] = secret_length
-    enrollment = enroll_totp(**enrollment_kwargs)
+    enrollment = (
+        enroll_totp(
+            account_name=account_name,
+            issuer_name=issuer_name,
+            digits=digits,
+            interval=interval,
+            secret_length=secret_length,
+        )
+        if secret_length is not None
+        else enroll_totp(
+            account_name=account_name,
+            issuer_name=issuer_name,
+            digits=digits,
+            interval=interval,
+        )
+    )
     device = TOTPDevice.objects.create(
         user=user,
         persisted_secret=enrollment.persisted_secret,
@@ -95,15 +102,22 @@ def enroll_hotp_device(
     digits: int = DEFAULT_HOTP_DIGITS,
     secret_length: int | None = None,
 ) -> HOTPDeviceEnrollment:
-    enrollment_kwargs = {
-        "account_name": account_name,
-        "issuer_name": issuer_name,
-        "initial_counter": initial_counter,
-        "digits": digits,
-    }
-    if secret_length is not None:
-        enrollment_kwargs["secret_length"] = secret_length
-    enrollment = enroll_hotp(**enrollment_kwargs)
+    enrollment = (
+        enroll_hotp(
+            account_name=account_name,
+            issuer_name=issuer_name,
+            initial_counter=initial_counter,
+            digits=digits,
+            secret_length=secret_length,
+        )
+        if secret_length is not None
+        else enroll_hotp(
+            account_name=account_name,
+            issuer_name=issuer_name,
+            initial_counter=initial_counter,
+            digits=digits,
+        )
+    )
     device = HOTPDevice.objects.create(
         user=user,
         persisted_secret=enrollment.persisted_secret,

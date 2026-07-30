@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
 from functools import wraps
 from typing import Any
 
 from django.conf import settings
 from django.http import HttpResponseForbidden
 from django.utils import timezone
-
 
 MFA_SESSION_KEY = "django_mfa_toolkit.mfa_elevation"
 DEFAULT_MFA_SESSION_AGE = 900
@@ -85,7 +85,7 @@ def _parse_elevated_at(value) -> Any | None:
     if not isinstance(value, str):
         return None
     try:
-        elevated_at = timezone.datetime.fromisoformat(value)
+        elevated_at = datetime.fromisoformat(value)
     except ValueError:
         return None
     if timezone.is_naive(elevated_at):

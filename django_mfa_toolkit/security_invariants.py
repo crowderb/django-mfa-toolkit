@@ -6,8 +6,14 @@ from dataclasses import dataclass
 from inspect import signature
 from typing import Literal
 
-from django_mfa_toolkit import device_adapters, hotp, integration_checks, recovery_codes, session_elevation, totp
-
+from django_mfa_toolkit import (
+    device_adapters,
+    hotp,
+    integration_checks,
+    recovery_codes,
+    session_elevation,
+    totp,
+)
 
 FORBIDDEN_TARGET_PARAMETER_NAMES = frozenset(
     {
@@ -214,7 +220,9 @@ MVP_CONTROL_REQUIREMENTS = (
         id="recovery-code.throttling",
         factor="recovery-code",
         description="Recovery-code verification can enforce local throttling before hash comparison.",
-        implemented_by=("django_mfa_toolkit.recovery_codes.verify_recovery_code(throttle_scope=...)",),
+        implemented_by=(
+            "django_mfa_toolkit.recovery_codes.verify_recovery_code(throttle_scope=...)",
+        ),
         verification="tests/test_recovery_codes.py::test_verify_recovery_code_throttles_before_code_comparison_without_consuming_code",
     ),
     ControlRequirement(
@@ -234,7 +242,9 @@ MVP_CONTROL_REQUIREMENTS = (
         id="recovery-code.session-elevation",
         factor="recovery-code",
         description="Accepted recovery-code verification marks a distinct post-MFA session factor.",
-        implemented_by=("django_mfa_toolkit.session_elevation.mark_mfa_elevated(factor='recovery-code')",),
+        implemented_by=(
+            "django_mfa_toolkit.session_elevation.mark_mfa_elevated(factor='recovery-code')",
+        ),
         verification="tests/test_integration_checks.py::test_recovery_code_in_process_client_flow_enforces_session_boundary",
     ),
 )
@@ -671,7 +681,11 @@ def get_mfa_control_graph() -> ControlGraph:
 def get_control_relationships(control_id: str) -> tuple[ControlGraphRelationship, ...]:
     """Return graph relationships originating from one control node."""
 
-    return tuple(relationship for relationship in MFA_CONTROL_GRAPH.relationships if relationship.source == control_id)
+    return tuple(
+        relationship
+        for relationship in MFA_CONTROL_GRAPH.relationships
+        if relationship.source == control_id
+    )
 
 
 def run_local_security_invariant_checks() -> tuple[SecurityInvariantCheck, ...]:

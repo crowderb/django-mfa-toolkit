@@ -70,8 +70,9 @@ No public API, package structure, compatibility promise, or release schedule exi
 
 ## Continuous Integration
 
-CI runs on GitHub Actions for every pull request and every push to `main`: the
-test suite (Python 3.11 and 3.12) plus a dependency CVE audit
+CI runs on GitHub Actions for every pull request and every push to `main`:
+formatting, linting, Django-aware type checks, the test suite (Python
+3.11 and 3.12), plus a dependency CVE audit
 ([`pip-audit`](https://pypi.org/project/pip-audit/)) that is enforced as a hard
 gate. See [`.docs/ci-cd.md`](.docs/ci-cd.md) for the pipeline and the audit
 remediation policy.
