@@ -5,7 +5,6 @@ from dataclasses import dataclass
 
 from django.core.cache import caches
 
-
 DEFAULT_MFA_THROTTLE_LIMIT = 5
 DEFAULT_MFA_THROTTLE_PERIOD = 300
 DEFAULT_MFA_THROTTLE_CACHE_ALIAS = "default"

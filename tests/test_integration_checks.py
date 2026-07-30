@@ -8,14 +8,20 @@ from django.test import Client
 from django.urls import path
 from django.utils import timezone as django_timezone
 
-from django_mfa_toolkit.device_adapters import enroll_hotp_device, enroll_totp_device, verify_totp_device
-from django_mfa_toolkit.integration_checks import MFALocalIntegrationCheckMixin, run_local_django_mfa_integration_checks
+from django_mfa_toolkit.device_adapters import (
+    enroll_hotp_device,
+    enroll_totp_device,
+    verify_totp_device,
+)
+from django_mfa_toolkit.integration_checks import (
+    MFALocalIntegrationCheckMixin,
+    run_local_django_mfa_integration_checks,
+)
 from django_mfa_toolkit.models import HOTPDevice, TOTPDevice
 from django_mfa_toolkit.recovery_codes import create_recovery_code_batch, verify_recovery_code
 from django_mfa_toolkit.secret_storage import decrypt_secret_text
 from django_mfa_toolkit.security_invariants import FORBIDDEN_TARGET_PARAMETER_NAMES
 from django_mfa_toolkit.session_elevation import mark_mfa_elevated, mfa_required
-
 
 FIXED_TOTP_TIME = datetime(2026, 6, 15, 18, 0, tzinfo=timezone.utc)
 
@@ -47,7 +53,9 @@ def verify_recovery_code_view(request):
         throttle_limit=1,
     )
     if result.accepted:
-        mark_mfa_elevated(request, factor="recovery-code", device_id=result.matched_recovery_code_id)
+        mark_mfa_elevated(
+            request, factor="recovery-code", device_id=result.matched_recovery_code_id
+        )
         return HttpResponse(status=204)
     if result.failure_reason == "throttled":
         return HttpResponse("throttled", status=429)
@@ -128,7 +136,9 @@ def test_local_integration_check_mixin_validates_in_process_client_session_bound
     settings.ROOT_URLCONF = __name__
     client = Client()
     client.force_login(synthetic_user)
-    code = pyotp.TOTP(decrypt_secret_text(synthetic_totp_device.persisted_secret)).at(FIXED_TOTP_TIME)
+    code = pyotp.TOTP(decrypt_secret_text(synthetic_totp_device.persisted_secret)).at(
+        FIXED_TOTP_TIME
+    )
 
     anonymous_response = client.get("/protected/")
     verified_response = client.post(f"/verify-totp/{synthetic_totp_device.pk}/", {"code": code})

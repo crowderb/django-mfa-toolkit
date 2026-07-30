@@ -15,9 +15,25 @@ Superseded runs on the same ref are cancelled automatically.
 ### `test`
 
 Installs [`uv`](https://docs.astral.sh/uv/), verifies the lockfile is in sync
-(`uv lock --check`), syncs the locked environment, and runs the test suite
-(`uv run python -m pytest -q`). It runs against Python 3.11 and 3.12, matching
-the versions advertised in `pyproject.toml` classifiers.
+(`uv lock --check`), syncs the locked environment, and runs formatting, lint,
+type, and test checks. It runs against Python 3.11 and 3.12, matching the
+versions advertised in `pyproject.toml` classifiers.
+
+The deterministic code-quality commands are:
+
+```bash
+uv run ruff format --check django_mfa_toolkit tests
+uv run ruff check django_mfa_toolkit tests
+uv run mypy
+```
+
+Ruff checks formatting and baseline correctness/import rules across maintained
+package code and its tests. Mypy runs in Django-aware mode against the
+maintained `django_mfa_toolkit` package. Django migrations are deliberately
+excluded from these static checks because they are framework-generated
+historical snapshots; migration import and behavior remain covered by the test
+suite. This keeps static coverage focused on the maintained, design-relevant
+implementation surface rather than generated code.
 
 ### `audit` — dependency CVE scan (pip-audit)
 
@@ -76,6 +92,19 @@ when the advisory does not affect shipped code.
 
 Never silence the audit by removing the step or converting it to alert-only
 without an explicit, documented decision.
+
+## Local full gate
+
+Run the same blocking checks locally before a pull request:
+
+```bash
+./scripts/ci-local.sh
+```
+
+The local gate checks the lockfile, syncs the locked environment, runs the
+three code-quality commands above, builds the package, runs the full pytest
+suite, and performs the locked dependency audit. It is supported on Python 3.11
+and 3.12; the CI matrix verifies both versions.
 
 ## Database topology audit: shared CI PostgreSQL
 

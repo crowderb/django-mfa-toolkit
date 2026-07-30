@@ -141,10 +141,14 @@ def test_hotp_verification_audit_event_persists_all_current_classifications(
 ):
     device = _synthetic_hotp_device(django_user_model)
     record = HOTPAuditRecord(
-        submitted_outcome="accepted" if classification in {"success", "counter_window_match"} else "rejected",
+        submitted_outcome="accepted"
+        if classification in {"success", "counter_window_match"}
+        else "rejected",
         result_classification=classification,
         server_counter=1,
-        matched_counter=1 if classification in {"success", "counter_window_match", "replay"} else None,
+        matched_counter=1
+        if classification in {"success", "counter_window_match", "replay"}
+        else None,
         next_counter=2,
         look_ahead=10,
         replay_window=10,
@@ -190,7 +194,9 @@ def test_hotp_resync_audit_event_persists_all_current_classifications(
 def test_audit_event_model_migration_is_importable():
     loader = MigrationLoader(connection)
     migration = loader.get_migration("django_mfa_toolkit", "0002_mfaauditevent")
-    created_models = {operation.name for operation in migration.operations if hasattr(operation, "name")}
+    created_models = {
+        operation.name for operation in migration.operations if hasattr(operation, "name")
+    }
 
     assert "MFAAuditEvent" in created_models
 

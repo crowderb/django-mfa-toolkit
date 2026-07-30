@@ -11,7 +11,6 @@ from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-
 _SERIALIZED_VERSION = "v1"
 _KEY_ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 

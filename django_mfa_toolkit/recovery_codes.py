@@ -20,11 +20,12 @@ from django_mfa_toolkit.throttling import (
     reset_mfa_throttle,
 )
 
-
 DEFAULT_RECOVERY_CODE_COUNT = 10
 DEFAULT_RECOVERY_CODE_GROUPS = 4
 DEFAULT_RECOVERY_CODE_GROUP_LENGTH = 4
-RECOVERY_CODE_ALPHABET = "".join(sorted(set(string.ascii_uppercase + string.digits) - {"0", "1", "I", "O"}))
+RECOVERY_CODE_ALPHABET = "".join(
+    sorted(set(string.ascii_uppercase + string.digits) - {"0", "1", "I", "O"})
+)
 
 
 class RecoveryCodeConfigurationError(ValueError):
@@ -94,7 +95,9 @@ def reset_recovery_code_batch(
     replaced_at = attempted_at or timezone.now()
 
     with transaction.atomic():
-        active_batches = RecoveryCodeBatch.objects.select_for_update().filter(user=user, replaced_at__isnull=True)
+        active_batches = RecoveryCodeBatch.objects.select_for_update().filter(
+            user=user, replaced_at__isnull=True
+        )
         active_batches.update(replaced_at=replaced_at)
         RecoveryCode.objects.select_for_update().filter(
             user=user,
@@ -162,7 +165,9 @@ def verify_recovery_code(
                 code=None,
                 attempted_at=timestamp,
             )
-            _persist_recovery_code_audit_if_requested(persist_audit=persist_audit, user=user, result=result)
+            _persist_recovery_code_audit_if_requested(
+                persist_audit=persist_audit, user=user, result=result
+            )
             return result
 
         active_codes = tuple(
@@ -176,7 +181,9 @@ def verify_recovery_code(
             )
             .order_by("pk")
         )
-        matched_code = next((code for code in active_codes if check_password(normalized_code, code.code_hash)), None)
+        matched_code = next(
+            (code for code in active_codes if check_password(normalized_code, code.code_hash)), None
+        )
 
         if matched_code is not None:
             matched_code.used_at = timestamp
@@ -190,7 +197,9 @@ def verify_recovery_code(
                 code=matched_code,
                 attempted_at=timestamp,
             )
-            _persist_recovery_code_audit_if_requested(persist_audit=persist_audit, user=user, result=result)
+            _persist_recovery_code_audit_if_requested(
+                persist_audit=persist_audit, user=user, result=result
+            )
             return result
 
         replay_code = _find_replayed_recovery_code(user=user, normalized_code=normalized_code)
@@ -212,7 +221,9 @@ def verify_recovery_code(
             code=code,
             attempted_at=timestamp,
         )
-        _persist_recovery_code_audit_if_requested(persist_audit=persist_audit, user=user, result=result)
+        _persist_recovery_code_audit_if_requested(
+            persist_audit=persist_audit, user=user, result=result
+        )
         return result
 
 
@@ -228,7 +239,9 @@ def _find_replayed_recovery_code(*, user, normalized_code: str) -> RecoveryCode 
         .exclude(used_at__isnull=True, replaced_at__isnull=True, batch__replaced_at__isnull=True)
         .order_by("pk")
     )
-    return next((code for code in historical_codes if check_password(normalized_code, code.code_hash)), None)
+    return next(
+        (code for code in historical_codes if check_password(normalized_code, code.code_hash)), None
+    )
 
 
 def _recovery_code_result(
@@ -246,7 +259,9 @@ def _recovery_code_result(
         audit_record=RecoveryCodeAuditRecord(
             event_type=MFAAuditEvent.EventType.VERIFICATION,
             submitted_outcome=(
-                MFAAuditEvent.SubmittedOutcome.ACCEPTED if accepted else MFAAuditEvent.SubmittedOutcome.REJECTED
+                MFAAuditEvent.SubmittedOutcome.ACCEPTED
+                if accepted
+                else MFAAuditEvent.SubmittedOutcome.REJECTED
             ),
             result_classification=result_classification,
             recovery_code_batch_id=code.batch_id if code is not None else None,
@@ -291,7 +306,8 @@ def _generate_unique_codes(*, count: int, groups: int, group_length: int) -> tup
     codes: set[str] = set()
     while len(codes) < count:
         groups_of_characters = (
-            "".join(secrets.choice(RECOVERY_CODE_ALPHABET) for _ in range(group_length)) for _ in range(groups)
+            "".join(secrets.choice(RECOVERY_CODE_ALPHABET) for _ in range(group_length))
+            for _ in range(groups)
         )
         codes.add("-".join(groups_of_characters))
     return tuple(codes)

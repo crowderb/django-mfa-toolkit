@@ -85,7 +85,9 @@ def test_totp_device_verification_updates_replay_state_atomically(
     code = pyotp.TOTP(secret).at(at_time)
 
     lock_calls = _record_select_for_update_calls(monkeypatch)
-    result = verify_totp_device(device=enrolled.device, submitted_code=code, at_time=at_time, valid_window=0)
+    result = verify_totp_device(
+        device=enrolled.device, submitted_code=code, at_time=at_time, valid_window=0
+    )
 
     enrolled.device.refresh_from_db()
 
@@ -110,9 +112,15 @@ def test_totp_device_replay_and_invalid_attempts_do_not_advance_state(
     secret = decrypt_secret_text(enrolled.device.persisted_secret)
     code = pyotp.TOTP(secret).at(at_time)
 
-    accepted = verify_totp_device(device=enrolled.device, submitted_code=code, at_time=at_time, valid_window=0)
-    replayed = verify_totp_device(device=enrolled.device, submitted_code=code, at_time=at_time, valid_window=0)
-    invalid = verify_totp_device(device=enrolled.device, submitted_code="000000", at_time=at_time, valid_window=0)
+    accepted = verify_totp_device(
+        device=enrolled.device, submitted_code=code, at_time=at_time, valid_window=0
+    )
+    replayed = verify_totp_device(
+        device=enrolled.device, submitted_code=code, at_time=at_time, valid_window=0
+    )
+    invalid = verify_totp_device(
+        device=enrolled.device, submitted_code="000000", at_time=at_time, valid_window=0
+    )
 
     enrolled.device.refresh_from_db()
 
@@ -220,7 +228,9 @@ def test_hotp_device_failed_and_replayed_attempts_do_not_advance_counter(
 
     accepted = verify_hotp_device(device=enrolled.device, submitted_code=code, look_ahead=0)
     invalid = verify_hotp_device(device=enrolled.device, submitted_code="000000", look_ahead=0)
-    replayed = verify_hotp_device(device=enrolled.device, submitted_code=code, look_ahead=0, replay_window=1)
+    replayed = verify_hotp_device(
+        device=enrolled.device, submitted_code=code, look_ahead=0, replay_window=1
+    )
 
     enrolled.device.refresh_from_db()
 
@@ -384,7 +394,9 @@ def test_unconfirmed_devices_reject_verification_without_state_changes(
     secret = decrypt_secret_text(enrolled.device.persisted_secret)
     code = pyotp.TOTP(secret).at(at_time)
 
-    result = verify_totp_device(device=enrolled.device, submitted_code=code, at_time=at_time, valid_window=0)
+    result = verify_totp_device(
+        device=enrolled.device, submitted_code=code, at_time=at_time, valid_window=0
+    )
 
     enrolled.device.refresh_from_db()
 
