@@ -105,3 +105,40 @@ The local gate checks the lockfile, syncs the locked environment, runs the
 three code-quality commands above, builds the package, runs the full pytest
 suite, and performs the locked dependency audit. It is supported on Python 3.11
 and 3.12; the CI matrix verifies both versions.
+
+## Database topology audit: shared CI PostgreSQL
+
+The `django-mfa-toolkit-23` audit against the
+`solutions-architecture/shared-ci-postgres` pattern found that this project
+does not currently require PostgreSQL. The full local gate in
+[`scripts/ci-local.sh`](../scripts/ci-local.sh) runs `uv lock --check`, locked
+dependency sync, package build, `uv run pytest`, and `uv run pip-audit`; it
+does not start or probe a database service. The hosted GitHub Actions workflow
+uses the same SQLite-backed Django test settings and likewise defines no
+PostgreSQL service.
+
+The test topology is deliberately in-process SQLite:
+`tests/settings.py` configures `django.db.backends.sqlite3` with
+`NAME = ":memory:"`. Consequently:
+
+- Host, port, database, user, and password are not configurable because no
+  PostgreSQL connection is used, and there are no hard-coded PostgreSQL
+  assumptions to remove.
+- There is no physical test database name to make unique; Django creates and
+  tears down the in-memory database within each test process. Concurrent CI
+  jobs are isolated by their separate processes.
+- No PostgreSQL role privileges, extensions, or cleanup job are required.
+  Killed runs cannot leak PostgreSQL databases because none are created.
+- Hosted CI intentionally matches the local topology rather than using a
+  PostgreSQL service container.
+
+This is an explicit exception to the shared-process/ephemeral-database
+pattern, not a shared mutable database. SQLite is sufficient for the current
+package tests, while PostgreSQL-specific behavior is outside this repository's
+audited CI contract. If future tests need PostgreSQL semantics, revisit this
+decision first: add a PostgreSQL-backed test configuration with environment-
+configurable connection fields, generate a safe unique per-run test database,
+require only the CI role privileges needed by Django (normally `CREATEDB`),
+and pair teardown with periodic orphan cleanup. Until then, the required
+alternative is to keep the existing in-memory SQLite setup and its current
+local/hosted CI gates.
